@@ -8,6 +8,7 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "generate-api": "openapi-generator-cli generate -i src/api/barber-booking-api.yaml -g typescript-fetch -o src/api/barber-booking-api --type-mappings Date=String --additional-properties=modelPropertyNaming=original",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -23,6 +24,7 @@
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@openapitools/openapi-generator-cli": "^2.24.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
