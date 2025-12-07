@@ -28,4 +28,13 @@ export class AuthService {
     async createSession(data: Prisma.SessionCreateInput): Promise<Session> {
         return this.prisma.session.create({ data });
     }
+
+    async invalidateRefreshToken(userId: string, refreshToken: string): Promise<void> {
+        await this.prisma.session.deleteMany({
+            where: {
+                userId,
+                refreshToken,
+            },
+        });
+    }
 }
