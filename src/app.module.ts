@@ -5,11 +5,11 @@ import { ConfigModule } from './config/config.module';
 import { BookingModule } from './booking/booking.module';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
-import { LoginService } from './auth/application/login/login.service';
-import { RegisterService } from './auth/application/register/register.service';
-import { RefreshTokenService } from './auth/application/refresh-token/refresh-token.service';
-import { LogoutService } from './auth/application/logout/logout.service';
-import { EnableMfaService } from './auth/application/mfa/enable-mfa/enable-mfa.service';
+import { LoginService } from './auth/application/use-cases/login.usecase';
+import { RegisterService } from './auth/application/use-cases/register.service';
+import { RefreshTokenService } from './auth/application/use-cases/refresh-token.service';
+import { LogoutService } from './auth/application/use-cases/logout.service';
+import { EnableMfaService } from './auth/application/use-cases/enable-mfa.service';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { UsersService } from './users/users.service';
 import { UsersController } from './users/users.controller';
@@ -26,7 +26,7 @@ import { MfaService } from './auth/infrastructure/prisma/mfa/mfa.service';
 import { AuthService } from './auth/infrastructure/prisma/auth/auth.repository';
 import { MfaService } from './auth/infrastructure/prisma/mfa/mfa.service';
 import { AuthService } from './auth/infrastructure/prisma/auth/auth.repository';
-import { EnableMfaService } from './auth/application/mfa/enable-mfa/enable-mfa.service';
+import { EnableMfaService } from './auth/application/use-cases/enable-mfa.service';
 
 @Module({
   imports: [ConfigModule, BookingModule, PrismaModule],

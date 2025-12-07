@@ -40,6 +40,18 @@ export class TokenService {
         }
     }
 
+    async issueTokens(user: { id: string; email: string }) {
+        const accessToken = await this.signToken(
+            { sub: user.id, email: user.email },
+            { expiresIn: '15m' },
+        );
+        const refreshToken = await this.signToken(
+            { sub: user.id },
+            { expiresIn: '7d' },
+        );
+        return { accessToken, refreshToken };
+    }
+
     // Helper to parse '1h', '15m', etc. to seconds
     private parseExpiresIn(expiresIn: string): number {
         const match = /^(\d+)([smhd])$/.exec(expiresIn);
