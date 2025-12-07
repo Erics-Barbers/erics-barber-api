@@ -3,7 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from './config/config.module';
 import { BookingModule } from './modules/booking/booking.module';
-import { AuthController } from './modules/auth/auth.controller';
+import { AuthController } from './modules/auth/presentation/controllers/auth.controller';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { UsersService } from './modules/users/users.service';
 import { UsersController } from './modules/users/users.controller';
