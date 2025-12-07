@@ -4,15 +4,12 @@ import { TokenService } from 'src/modules/auth/infrastructure/services/token/tok
 
 @Injectable()
 export class RefreshTokenService {
-    constructor(
-        private readonly authService: AuthService,
-    ) {}
+  constructor(private readonly authService: AuthService) {}
 
-    async execute(userId: string, refreshToken: string): Promise<void> {
-        // Validate refresh token
-        await this.authService.invalidateRefreshToken(userId, refreshToken);
+  async execute(userId: string, refreshToken: string): Promise<void> {
+    // Validate refresh token
+    await this.authService.invalidateRefreshToken(userId, refreshToken);
 
-        // Additional logic for issuing new tokens can be added here
-        
-    }
+    // Additional logic for issuing new tokens can be added here
+  }
 }

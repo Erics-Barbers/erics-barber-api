@@ -3,12 +3,10 @@ import { AuthService } from 'src/modules/auth/infrastructure/prisma/auth/auth.re
 
 @Injectable()
 export class RegisterService {
-    constructor(
-        private readonly authService: AuthService,
-    ) {}
+  constructor(private readonly authService: AuthService) {}
 
-    async execute(email: string, password: string): Promise<void> {
-        const data = { email, password };
-        await this.authService.createUser(data);
-    }
+  async execute(email: string, password: string): Promise<void> {
+    const data = { email, password };
+    await this.authService.createUser(data);
+  }
 }

@@ -3,11 +3,9 @@ import { AuthService } from 'src/modules/auth/infrastructure/prisma/auth/auth.re
 
 @Injectable()
 export class LogoutService {
-    constructor(
-        private readonly authService: AuthService,
-    ) {}
+  constructor(private readonly authService: AuthService) {}
 
-    async execute(userId: string, refreshToken: string): Promise<void> {
-        await this.authService.invalidateRefreshToken(userId, refreshToken);
-    }
+  async execute(userId: string, refreshToken: string): Promise<void> {
+    await this.authService.invalidateRefreshToken(userId, refreshToken);
+  }
 }

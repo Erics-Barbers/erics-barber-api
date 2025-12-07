@@ -3,13 +3,16 @@ import { hash, compare } from 'bcrypt';
 
 @Injectable()
 export class BcryptService {
-    private readonly saltRounds = 10;
+  private readonly saltRounds = 10;
 
-    async hashPassword(password: string): Promise<string> {
-        return hash(password, this.saltRounds);
-    }
+  async hashPassword(password: string): Promise<string> {
+    return hash(password, this.saltRounds);
+  }
 
-    async comparePasswords(password: string, hashedPassword: string): Promise<boolean> {
-        return compare(password, hashedPassword);
-    }
+  async comparePasswords(
+    password: string,
+    hashedPassword: string,
+  ): Promise<boolean> {
+    return compare(password, hashedPassword);
+  }
 }

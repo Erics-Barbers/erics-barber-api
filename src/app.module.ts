@@ -21,7 +21,25 @@ import { AuthService } from './modules/auth/infrastructure/prisma/auth/auth.repo
 
 @Module({
   imports: [ConfigModule, BookingModule, PrismaModule],
-  controllers: [AppController, AuthController, NotificationsController, PaymentsController, UsersController],
-  providers: [AppService, AuthService, RefreshTokenService, MfaService, JwtService, LocalService, BcryptService, TokenService, NotificationsService, PaymentsService, UsersService],
+  controllers: [
+    AppController,
+    AuthController,
+    NotificationsController,
+    PaymentsController,
+    UsersController,
+  ],
+  providers: [
+    AppService,
+    AuthService,
+    RefreshTokenService,
+    MfaService,
+    JwtService,
+    LocalService,
+    BcryptService,
+    TokenService,
+    NotificationsService,
+    PaymentsService,
+    UsersService,
+  ],
 })
 export class AppModule {}

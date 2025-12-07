@@ -3,6 +3,6 @@ import { BookingController } from './booking.controller';
 import { BookingController } from './booking.controller';
 
 @Module({
-  controllers: [BookingController]
+  controllers: [BookingController],
 })
 export class BookingModule {}

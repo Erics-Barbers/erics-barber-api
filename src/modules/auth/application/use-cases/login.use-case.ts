@@ -10,11 +10,13 @@ export class LoginUseCase {
   ) {}
 
   async execute(email: string, password: string) {
-    const user = await this.authService.validateUserCredentials(email, password);
+    const user = await this.authService.validateUserCredentials(
+      email,
+      password,
+    );
 
     if (!user) throw new UnauthorizedException();
 
     return this.tokenService.issueTokens(user);
   }
 }
-
