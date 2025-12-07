@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuthService } from 'src/auth/infrastructure/prisma/auth/auth.repository';
+import { AuthService } from 'src/modules/auth/infrastructure/prisma/auth/auth.repository';
 
 @Injectable()
 export class RegisterService {

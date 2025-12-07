@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { AuthService } from 'src/auth/infrastructure/prisma/auth/auth.repository';
-import { TokenService } from 'src/auth/infrastructure/services/token/token.service';
+import { AuthService } from 'src/modules/auth/infrastructure/prisma/auth/auth.repository';
+import { TokenService } from 'src/modules/auth/infrastructure/services/token/token.service';
 
 @Injectable()
 export class LoginUseCase {
