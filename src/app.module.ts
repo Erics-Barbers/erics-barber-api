@@ -4,7 +4,6 @@ import { AppService } from './app.service';
 import { ConfigModule } from './config/config.module';
 import { BookingModule } from './modules/booking/booking.module';
 import { AuthController } from './modules/auth/presentation/controllers/auth.controller';
-import { PrismaModule } from './common/prisma/prisma.module';
 import { UsersService } from './modules/users/users.service';
 import { UsersController } from './modules/users/users.controller';
 import { PaymentsService } from './modules/payments/payments.service';
@@ -17,10 +16,10 @@ import { RefreshTokenService } from './modules/auth/infrastructure/strategies/re
 import { LocalService } from './modules/auth/infrastructure/strategies/local/local.service';
 import { JwtService } from './modules/auth/infrastructure/strategies/jwt/jwt.service';
 import { MfaService } from './modules/auth/infrastructure/prisma/mfa.service';
-import { AuthService } from './modules/auth/infrastructure/prisma/auth/auth.repository';
+import { AuthService } from './modules/auth/infrastructure/prisma/auth.repository';
 
 @Module({
-  imports: [ConfigModule, BookingModule, PrismaModule],
+  imports: [ConfigModule, BookingModule],
   controllers: [
     AppController,
     AuthController,
