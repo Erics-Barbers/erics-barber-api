@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AuthService } from 'src/modules/auth/infrastructure/prisma/auth/auth.repository';
-import { TokenService } from 'src/modules/auth/infrastructure/services/token/token.service';
+import { TokenService } from 'src/modules/auth/infrastructure/services/jwt-token.service';
 
 @Injectable()
 export class RefreshTokenService {

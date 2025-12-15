@@ -11,12 +11,12 @@ import { PaymentsService } from './modules/payments/payments.service';
 import { PaymentsController } from './modules/payments/payments.controller';
 import { NotificationsService } from './modules/notifications/notifications.service';
 import { NotificationsController } from './modules/notifications/notifications.controller';
-import { TokenService } from './modules/auth/infrastructure/services/token/token.service';
-import { BcryptService } from './modules/auth/infrastructure/services/bcrypt/bcrypt.service';
+import { TokenService } from './modules/auth/infrastructure/services/jwt-token.service';
+import { BcryptService } from './modules/auth/infrastructure/services/bcrypt.service';
 import { RefreshTokenService } from './modules/auth/infrastructure/strategies/refresh-token/refresh-token.service';
 import { LocalService } from './modules/auth/infrastructure/strategies/local/local.service';
 import { JwtService } from './modules/auth/infrastructure/strategies/jwt/jwt.service';
-import { MfaService } from './modules/auth/infrastructure/prisma/mfa/mfa.service';
+import { MfaService } from './modules/auth/infrastructure/prisma/mfa.service';
 import { AuthService } from './modules/auth/infrastructure/prisma/auth/auth.repository';
 
 @Module({
