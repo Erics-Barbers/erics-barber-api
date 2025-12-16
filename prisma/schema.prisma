@@ -25,6 +25,7 @@ model User {
   accounts       ExternalAccount[]
   mfa            Mfa?
   sessions       Session[]
+  bookings       Booking[]
 }
 
 model ExternalAccount {
@@ -55,6 +56,18 @@ model Session {
   expiresAt      DateTime
   createdAt      DateTime   @default(now())
   user           User       @relation(fields: [userId], references: [id])
+}
+
+model Booking {
+  id            String   @id @default(uuid())
+  userId        String
+  startTime     DateTime
+  endTime       DateTime
+  createdAt     DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 enum UserRole {
