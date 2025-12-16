@@ -1,1 +1,4 @@
-export class RegisterDto {}
+export class RegisterDto {
+    readonly email: string;
+    readonly password: string;
+}

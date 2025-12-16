@@ -1,20 +1,35 @@
-import { Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
+import { RegisterUseCase } from '../../application/use-cases/register.use-case';
+import { LoginUseCase } from '../../application/use-cases/login.use-case';
+import { LogoutUseCase } from '../../application/use-cases/logout.use-case';
+import { ResetPasswordUseCase } from '../../application/use-cases/reset-password.use-case';
+import { EnableMfaUseCase } from '../../application/use-cases/enable-mfa.use-case';
+import { RegisterDto } from '../dto/register.dto';
+import { LoginDto } from '../dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
+  constructor(
+    private readonly registerUseCase: RegisterUseCase,
+    private readonly loginUseCase: LoginUseCase,
+    private readonly logoutUseCase: LogoutUseCase,
+    private readonly resetPasswordUseCase: ResetPasswordUseCase,
+    private readonly enableMFAUseCase: EnableMfaUseCase,
+  ) {}
+
   @Post('register')
-  async register() {
-    // Registration logic here
+  async register(@Body() dto: RegisterDto) {
+    this.registerUseCase.execute(dto.email, dto.password);
   }
 
   @Post('login')
-  async login() {
-    // Login logic here
+  async login(@Body() dto: LoginDto) {
+    this.loginUseCase.execute(dto.email, dto.password);
   }
 
   @Post('reset-password')
   async resetPassword() {
-    // reset password logic here
+    // Reset password logic here
   }
 
   @Post('verify-mfa')

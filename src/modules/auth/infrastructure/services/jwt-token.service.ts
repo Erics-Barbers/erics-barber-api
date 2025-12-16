@@ -10,6 +10,18 @@ export class TokenService {
     return new TextEncoder().encode(this.secret);
   }
 
+  async generateTokens(email: string) {
+    const accessToken = await this.signToken(
+      { email },
+      { expiresIn: '15m' },
+    );
+    const refreshToken = await this.signToken(
+      { email },
+      { expiresIn: '7d' },
+    );
+    return { accessToken, refreshToken };
+  }
+
   async signToken(
     payload: object,
     options?: { expiresIn?: string },

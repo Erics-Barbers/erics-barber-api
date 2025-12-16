@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AuthService } from '../../infrastructure/prisma/auth.repository';
 
 @Injectable()
-export class LogoutService {
+export class LogoutUseCase {
   constructor(private readonly authService: AuthService) {}
 
   async execute(userId: string, refreshToken: string): Promise<void> {

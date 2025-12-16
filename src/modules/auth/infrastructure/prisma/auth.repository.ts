@@ -48,4 +48,20 @@ export class AuthService {
       },
     });
   }
+
+  async resetpassword(userId: string, newPassword: string): Promise<void> {
+    const passwordHash = await this.bcryptService.hashPassword(newPassword);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+  }
+
+  // TODO: Implement enableMfa method
+  async enableMfa(userId: string, mfaSecret: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { mfaSecret } as Prisma.UserUpdateInput,
+    });
+  }
 }
