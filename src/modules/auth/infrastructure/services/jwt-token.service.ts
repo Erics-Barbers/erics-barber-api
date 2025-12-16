@@ -11,14 +11,8 @@ export class TokenService {
   }
 
   async generateTokens(email: string) {
-    const accessToken = await this.signToken(
-      { email },
-      { expiresIn: '15m' },
-    );
-    const refreshToken = await this.signToken(
-      { email },
-      { expiresIn: '7d' },
-    );
+    const accessToken = await this.signToken({ email }, { expiresIn: '15m' });
+    const refreshToken = await this.signToken({ email }, { expiresIn: '7d' });
     return { accessToken, refreshToken };
   }
 

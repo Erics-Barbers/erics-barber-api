@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuthService } from '../../infrastructure/prisma/auth.repository';
+import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
 
 @Injectable()
 export class LogoutUseCase {
