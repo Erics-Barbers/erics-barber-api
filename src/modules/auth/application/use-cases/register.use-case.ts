@@ -3,6 +3,7 @@ import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository'
 import { BcryptService } from '../../infrastructure/services/bcrypt.service';
 import { TokenService } from '../../infrastructure/services/jwt-token.service';
 import { AuthResponseDto } from '../../presentation/dto/auth-response.dto';
+import { RegisterDto } from '../../presentation/dto/register.dto';
 
 @Injectable()
 export class RegisterUseCase {
@@ -12,17 +13,17 @@ export class RegisterUseCase {
     readonly tokenService: TokenService,
   ) {}
 
-  async execute(email: string, password: string): Promise<AuthResponseDto> {
-    const existingUser = await this.authService.findUserByEmail(email);
+  async execute(data: RegisterDto): Promise<AuthResponseDto> {
+    const existingUser = await this.authService.findUserByEmail(data.email);
     if (existingUser) {
       throw new Error('User with this email already exists');
     }
 
-    const hashedPassword = await this.bcryptService.hashPassword(password);
-    const data = { email, hashedPassword };
-    await this.authService.createUser(data);
+    const hashedPassword = await this.bcryptService.hashPassword(data.passwordHash);
+    const hashedData = { email: data.email, passwordHash: hashedPassword };
+    await this.authService.createUser(hashedData);
 
-    const tokens = await this.tokenService.generateTokens(email);
+    const tokens = await this.tokenService.generateTokens(data.email);
     return AuthResponseDto.create(tokens);
   }
 }

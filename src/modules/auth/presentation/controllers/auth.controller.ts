@@ -6,6 +6,7 @@ import { ResetPasswordUseCase } from '../../application/use-cases/reset-password
 import { EnableMfaUseCase } from '../../application/use-cases/enable-mfa.use-case';
 import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
+import { LogOutDto } from '../dto/logout.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -19,12 +20,24 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() dto: RegisterDto) {
-    this.registerUseCase.execute(dto.email, dto.password);
+    const tokens = await this.registerUseCase.execute(dto);
+    return { 
+      message: 'User registered successfully',
+      accessToken:  tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
   }
 
   @Post('login')
   async login(@Body() dto: LoginDto) {
-    this.loginUseCase.execute(dto.email, dto.password);
+    const result = await this.loginUseCase.execute(dto);
+    return result;
+  }
+
+  @Post('logout')
+  async logout(@Body() dto: LogOutDto) {
+    await this.logoutUseCase.execute(dto);
+    return { message: 'User logged out successfully' };
   }
 
   @Post('reset-password')

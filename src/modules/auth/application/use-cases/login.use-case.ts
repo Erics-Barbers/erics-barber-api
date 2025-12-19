@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
 import { TokenService } from 'src/modules/auth/infrastructure/services/jwt-token.service';
+import { LoginDto } from '../../presentation/dto/login.dto';
 
 @Injectable()
 export class LoginUseCase {
@@ -9,14 +10,14 @@ export class LoginUseCase {
     private readonly tokenService: TokenService,
   ) {}
 
-  async execute(email: string, password: string) {
+  async execute(dto: LoginDto) {
     const user = await this.authService.validateUserCredentials(
-      email,
-      password,
+      dto.email,
+      dto.password,
     );
 
     if (!user) throw new UnauthorizedException();
 
-    return this.tokenService.issueTokens(user);
+    return await this.tokenService.issueTokens(user);
   }
 }
