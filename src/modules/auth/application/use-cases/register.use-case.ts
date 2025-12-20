@@ -24,6 +24,7 @@ export class RegisterUseCase {
     await this.authService.createUser(hashedData);
 
     const tokens = await this.tokenService.generateTokens(data.email);
+    await this.authService.sendVerificationEmail(data.email, tokens.accessToken);
     return AuthResponseDto.create(tokens);
   }
 }

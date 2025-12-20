@@ -1,1 +1,4 @@
-export class MfaDto {}
+export class MfaDto {
+    userId: string;
+    mfaCode: string;
+}

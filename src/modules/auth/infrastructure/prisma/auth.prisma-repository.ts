@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { BcryptService } from '../services/bcrypt.service';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { User, Session, Prisma } from 'generated/prisma/client';
+import { ResendService } from 'src/infrastructure/mail/resend.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bcryptService: BcryptService,
+    private readonly resendService: ResendService,
   ) {}
 
   async findUserByEmail(email: string): Promise<User | null> {
@@ -47,19 +49,36 @@ export class AuthService {
     });
   }
 
-  async resetpassword(userId: string, newPassword: string): Promise<void> {
+  async resetPassword(email: string, newPassword: string): Promise<void> {
     const passwordHash = await this.bcryptService.hashPassword(newPassword);
     await this.prisma.user.update({
-      where: { id: userId },
+      where: { email },
       data: { passwordHash },
     });
   }
 
-  // TODO: Implement enableMfa method
   async enableMfa(userId: string, mfaSecret: string): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
       data: { mfaSecret } as Prisma.UserUpdateInput,
+    });
+  }
+
+  async sendVerificationEmail(email: string, token: string): Promise<void> {
+    const verificationLink = `https://your-app.com/verify-email?token=${token}`;
+    const subject = 'Verify Your Email';
+    const emailContent = `
+      <h1>Email Verification</h1>
+      <p>Please verify your email by clicking the link below:</p>
+      <a href="${verificationLink}">Verify Email</a>
+    `;
+    await this.resendService.sendEmail(email, subject, emailContent);
+  }
+
+  async markEmailAsVerified(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { isEmailVerified: true },
     });
   }
 }
