@@ -17,6 +17,9 @@ export class LoginUseCase {
     );
 
     if (!user) throw new UnauthorizedException();
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedException('Email not verified');
+    }
 
     return await this.tokenService.issueTokens(user);
   }

@@ -65,7 +65,7 @@ export class AuthService {
   }
 
   async sendVerificationEmail(email: string, token: string): Promise<void> {
-    const verificationLink = `https://your-app.com/verify-email?token=${token}`;
+    const verificationLink = `https://erics-barbers-luton.co.uk/verify-email?token=${token}`;
     const subject = 'Verify Your Email';
     const emailContent = `
       <h1>Email Verification</h1>
@@ -80,5 +80,16 @@ export class AuthService {
       where: { id: userId },
       data: { isEmailVerified: true },
     });
+  }
+
+  async sendResetPasswordEmail(email: string, token: string): Promise<void> {
+    const resetLink = `https://erics-barbers-luton.co.uk/reset-password?token=${token}`;
+    const subject = 'Reset Your Password';
+    const emailContent = `
+      <h1>Password Reset</h1>
+      <p>You can reset your password by clicking the link below:</p>
+      <a href="${resetLink}">Reset Password</a>
+    `;
+    await this.resendService.sendEmail(email, subject, emailContent);
   }
 }

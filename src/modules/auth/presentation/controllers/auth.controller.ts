@@ -1,15 +1,18 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { RegisterUseCase } from '../../application/use-cases/register.use-case';
+
+import { EnableMfaUseCase } from '../../application/use-cases/enable-mfa.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../../application/use-cases/logout.use-case';
+import { RegisterUseCase } from '../../application/use-cases/register.use-case';
 import { ResetPasswordUseCase } from '../../application/use-cases/reset-password.use-case';
-import { EnableMfaUseCase } from '../../application/use-cases/enable-mfa.use-case';
-import { RegisterDto } from '../dto/register.dto';
+import { ResetPasswordEmailUseCase } from '../../application/use-cases/reset-password-email.use-case';
+import { VerifyEmailUseCase } from '../../application/use-cases/verify-email.use-case';
+
 import { LoginDto } from '../dto/login.dto';
 import { LogOutDto } from '../dto/logout.dto';
-import { VerifyEmailUseCase } from '../../application/use-cases/verify-email.use-case';
-import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { MfaDto } from '../dto/mfa.dto';
+import { RegisterDto } from '../dto/register.dto';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -19,6 +22,7 @@ export class AuthController {
     private readonly loginUseCase: LoginUseCase,
     private readonly logoutUseCase: LogoutUseCase,
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
+    private readonly resetPasswordEmailUseCase: ResetPasswordEmailUseCase,
     private readonly enableMFAUseCase: EnableMfaUseCase,
   ) {}
 
@@ -48,6 +52,12 @@ export class AuthController {
   async logout(@Body() dto: LogOutDto) {
     await this.logoutUseCase.execute(dto);
     return { message: 'User logged out successfully' };
+  }
+
+  @Post('reset-password-email')
+  async resetPasswordEmail(@Body('email') email: string) {
+    await this.resetPasswordEmailUseCase.execute(email);
+    return { message: 'Password reset link sent to email if it exists' };
   }
 
   @Post('reset-password')

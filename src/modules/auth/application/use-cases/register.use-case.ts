@@ -19,12 +19,17 @@ export class RegisterUseCase {
       throw new Error('User with this email already exists');
     }
 
-    const hashedPassword = await this.bcryptService.hashPassword(data.passwordHash);
+    const hashedPassword = await this.bcryptService.hashPassword(
+      data.passwordHash,
+    );
     const hashedData = { email: data.email, passwordHash: hashedPassword };
     await this.authService.createUser(hashedData);
 
     const tokens = await this.tokenService.generateTokens(data.email);
-    await this.authService.sendVerificationEmail(data.email, tokens.accessToken);
+    await this.authService.sendVerificationEmail(
+      data.email,
+      tokens.accessToken,
+    );
     return AuthResponseDto.create(tokens);
   }
 }
