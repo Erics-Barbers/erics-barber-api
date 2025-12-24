@@ -9,7 +9,7 @@
     "node": "22.21.0"
   },
   "scripts": {
-    "build": "nest build && npx prisma generate",
+    "build": "npx prisma migrate dev && npx prisma generate && nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "generate-api": "openapi-generator-cli generate -i src/api/barber-booking-api.yaml -g typescript-fetch -o src/api/barber-booking-api --type-mappings Date=String --additional-properties=modelPropertyNaming=original",
     "prisma:ui": "npx prisma studio",
