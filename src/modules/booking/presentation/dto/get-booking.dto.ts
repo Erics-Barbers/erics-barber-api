@@ -5,8 +5,10 @@ export class GetBookingDto {
 
 export class GetAllBookingsDto {
   readonly userId: string;
-} 
+}
 
 export class GetBookingsQueryDto {
-    readonly page?: number;
+  readonly userId: string;
+  readonly page?: number;
+  readonly limit?: number;
 }

@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { GetBookingsUseCase } from '../application/use-cases/get-bookings.use-case';
 import { GetBookingDetailsUseCase } from '../application/use-cases/get-booking.use-case';
 import { CreateBookingUseCase } from '../application/use-cases/create-booking.use-case';
@@ -22,17 +30,17 @@ export class BookingController {
   }
 
   @Get(':id')
-  async getBookingDetails(@Param('id') id: string) {
-    await this.getBookingDetailsUseCase.execute(id);
+  async getBookingDetails(@Param('id') bookingId: string) {
+    await this.getBookingDetailsUseCase.execute(bookingId);
   }
 
   @Post('')
-  async createBooking(dto: CreateBookingDto) {
+  async createBooking(@Body() dto: CreateBookingDto) {
     await this.createBookingUseCase.execute(dto);
   }
 
   @Patch(':id')
-  async updateBooking(@Param('id') id: string, dto: UpdateBookingDto) {
+  async updateBooking(@Param('id') id: string, @Body() dto: UpdateBookingDto) {
     await this.updateBookingUseCase.execute(id, dto);
   }
 }

@@ -3,6 +3,7 @@ import { ResendService } from 'src/infrastructure/mail/resend.service';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { CreateBookingDto } from '../../presentation/dto/create-booking.dto';
 import { UpdateBookingDto } from '../../presentation/dto/update-booking.dto';
+import { GetBookingsQueryDto } from '../../presentation/dto/get-booking.dto';
 
 @Injectable()
 export class BookingService {
@@ -37,10 +38,10 @@ export class BookingService {
     );
   }
 
-  async updateBooking(dto: UpdateBookingDto) {
+  async updateBooking(bookingId: string, dto: UpdateBookingDto) {
     await this.prismaService.booking.update({
       where: {
-        id: '',
+        id: bookingId,
       },
       data: {
         startTime: dto.appointmentDate,
@@ -57,7 +58,28 @@ export class BookingService {
     );
   }
 
-  async getBookingDetails(bookingId: string) {}
+  async getBookingDetails(bookingId: string) {
+    return await this.prismaService.booking.findUnique({
+      where: {
+        id: bookingId,
+      },
+    });
+  }
 
-  async getBookings() {}
+  async getBookings(query: GetBookingsQueryDto) {
+    const userBookings = await this.prismaService.booking.findMany({
+      where: {
+        userId: query.userId,
+      },
+    });
+
+    if (query.page) {
+      const page = query.page;
+      const limit = query.limit || 10;
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+      return userBookings.slice(startIndex, endIndex);
+    }
+    return userBookings;
+  }
 }
