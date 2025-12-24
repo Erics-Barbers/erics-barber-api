@@ -28,18 +28,16 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() dto: RegisterDto) {
-    const tokens = await this.registerUseCase.execute(dto);
+    await this.registerUseCase.execute(dto);
     return {
-      message: 'User registered successfully',
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+      message: 'User registered successfully. Check your email for verification link.',
     };
   }
 
   @Post('verify-email')
   async verifyEmail(@Body('token') token: string) {
-    await this.verifyEmailUseCase.execute(token);
-    return { message: 'Email verified successfully' };
+    const tokens = await this.verifyEmailUseCase.execute(token);
+    return { message: 'Email verified successfully', tokens };
   }
 
   @Post('login')
