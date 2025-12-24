@@ -1,10 +1,13 @@
 {
   "name": "erics-barber-api",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "description": "Auth & Booking API for Eric's Barber Shop",
+  "author": "Fahmid Haque",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": "22.21.0"
+  },
   "scripts": {
     "build": "nest build && npx prisma generate",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
