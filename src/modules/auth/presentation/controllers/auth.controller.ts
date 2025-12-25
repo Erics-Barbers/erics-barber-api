@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 
 import { EnableMfaUseCase } from '../../application/use-cases/enable-mfa.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
@@ -13,6 +13,7 @@ import { LogOutDto } from '../dto/logout.dto';
 import { MfaDto } from '../dto/mfa.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { AuthGuard } from 'src/common/guards/auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -44,6 +45,12 @@ export class AuthController {
   async login(@Body() dto: LoginDto) {
     const result = await this.loginUseCase.execute(dto);
     return { result, message: 'User logged in successfully' };
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('profile')
+  async getProfile() {
+    // Implementation for fetching user profile goes here
   }
 
   @Post('logout')

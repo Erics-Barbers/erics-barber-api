@@ -3,7 +3,7 @@ import { SignJWT, jwtVerify, decodeJwt, JWTPayload } from 'jose';
 
 @Injectable()
 export class TokenService {
-  private readonly secret = process.env.JWT_SECRET || 'defaultSecret';
+  private readonly secret = process.env.JWT_SECRET!;
   private readonly defaultExpiresIn = '1h';
 
   private getJwtSecret(): Uint8Array {

@@ -12,6 +12,19 @@ export class AuthService {
     private readonly resendService: ResendService,
   ) {}
 
+  async getProfile(userId: string): Promise<any> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        isEmailVerified: true,
+        updatedAt: true,
+      },
+    });
+    return user;
+  }
+
   async findUserByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { email } });
   }

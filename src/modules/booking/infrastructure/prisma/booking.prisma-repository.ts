@@ -13,6 +13,12 @@ export class BookingService {
   ) {}
 
   async createBooking(dto: CreateBookingDto) {
+    // Check new booking time is not in the past
+    if (dto.appointmentDate < new Date()) {
+      throw new Error('Cannot create booking in the past');
+    }
+
+    // Check booking time is available
     const existingBooking = await this.prismaService.booking.findFirst({
       where: {
         startTime: dto.appointmentDate,
@@ -39,6 +45,34 @@ export class BookingService {
   }
 
   async updateBooking(bookingId: string, dto: UpdateBookingDto) {
+    // Check if booking exists
+    const booking = await this.prismaService.booking.findUnique({
+      where: { id: bookingId },
+    });
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+
+    // Check new booking time is not in the past
+    if (dto.appointmentDate && dto.appointmentDate < new Date()) {
+      throw new Error('Cannot update booking to a past date');
+    }
+
+    // Check booking time is available
+    if (dto.appointmentDate) {
+      const existingBooking = await this.prismaService.booking.findFirst({
+        where: {
+          startTime: dto.appointmentDate,
+          NOT: { id: bookingId },
+        },
+      });
+
+      if (existingBooking) {
+        throw new Error('Booking time is not available');
+      }
+    }
+
+    // Update booking details
     await this.prismaService.booking.update({
       where: {
         id: bookingId,
@@ -59,6 +93,11 @@ export class BookingService {
   }
 
   async getBookingDetails(bookingId: string) {
+    // Determine if requester is allowed to access this booking
+    // Customer or Barber can only access their own bookings
+
+
+
     return await this.prismaService.booking.findUnique({
       where: {
         id: bookingId,
@@ -67,6 +106,9 @@ export class BookingService {
   }
 
   async getBookings(query: GetBookingsQueryDto) {
+    // Check userId matches logged in user
+
+
     const userBookings = await this.prismaService.booking.findMany({
       where: {
         userId: query.userId,
