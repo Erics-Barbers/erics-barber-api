@@ -13,11 +13,7 @@ import { TokenService } from './infrastructure/services/jwt-token.service';
 @Module({
   imports: [PrismaModule],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    BcryptService,
-    TokenService,
-  ],
+  providers: [AuthService, BcryptService, TokenService],
   exports: [AuthService, TokenService],
 })
 export class AuthModule {}

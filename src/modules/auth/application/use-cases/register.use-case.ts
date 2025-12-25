@@ -15,7 +15,7 @@ export class RegisterUseCase {
   async execute(data: RegisterDto): Promise<void> {
     await this.checkIfEmailIsInUse(data.email);
     await this.storeUserCredentials(data);
-    
+
     const tokens = await this.tokenService.generateTokens(data.email);
     await this.authService.sendVerificationEmail(
       data.email,

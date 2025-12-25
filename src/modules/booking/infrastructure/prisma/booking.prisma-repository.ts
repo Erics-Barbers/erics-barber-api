@@ -96,8 +96,6 @@ export class BookingService {
     // Determine if requester is allowed to access this booking
     // Customer or Barber can only access their own bookings
 
-
-
     return await this.prismaService.booking.findUnique({
       where: {
         id: bookingId,
@@ -107,7 +105,6 @@ export class BookingService {
 
   async getBookings(query: GetBookingsQueryDto) {
     // Check userId matches logged in user
-
 
     const userBookings = await this.prismaService.booking.findMany({
       where: {

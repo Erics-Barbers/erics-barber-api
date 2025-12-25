@@ -23,7 +23,10 @@ export class VerifyEmailUseCase {
     }
 
     await this.authService.markEmailAsVerified(user.id);
-    const tokens = await this.tokenService.issueTokens({ id: user.id, email: user.email });
+    const tokens = await this.tokenService.issueTokens({
+      id: user.id,
+      email: user.email,
+    });
     return AuthResponseDto.create(tokens);
   }
 }

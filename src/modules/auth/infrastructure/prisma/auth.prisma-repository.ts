@@ -7,13 +7,13 @@ import { ResendService } from 'src/infrastructure/mail/resend.service';
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly prismaService: PrismaService,
     private readonly bcryptService: BcryptService,
     private readonly resendService: ResendService,
   ) {}
 
   async getProfile(userId: string): Promise<any> {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prismaService.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -25,12 +25,26 @@ export class AuthService {
     return user;
   }
 
+  async updateProfile(userId: string, profileData: any): Promise<any> {
+    const updatedUser = await this.prismaService.user.update({
+      where: { id: userId },
+      data: profileData,
+      select: {
+        id: true,
+        email: true,
+        isEmailVerified: true,
+        updatedAt: true,
+      },
+    });
+    return updatedUser;
+  }
+
   async findUserByEmail(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { email } });
+    return this.prismaService.user.findUnique({ where: { email } });
   }
 
   async createUser(data: Prisma.UserCreateInput): Promise<User> {
-    return this.prisma.user.create({ data });
+    return this.prismaService.user.create({ data });
   }
 
   async validateUserCredentials(
@@ -47,14 +61,14 @@ export class AuthService {
   }
 
   async createSession(data: Prisma.SessionCreateInput): Promise<Session> {
-    return this.prisma.session.create({ data });
+    return this.prismaService.session.create({ data });
   }
 
   async invalidateRefreshToken(
     userId: string,
     refreshToken: string,
   ): Promise<void> {
-    await this.prisma.session.deleteMany({
+    await this.prismaService.session.deleteMany({
       where: {
         userId,
         refreshToken,
@@ -64,14 +78,14 @@ export class AuthService {
 
   async resetPassword(email: string, newPassword: string): Promise<void> {
     const passwordHash = await this.bcryptService.hashPassword(newPassword);
-    await this.prisma.user.update({
+    await this.prismaService.user.update({
       where: { email },
       data: { passwordHash },
     });
   }
 
   async enableMfa(userId: string, mfaSecret: string): Promise<void> {
-    await this.prisma.user.update({
+    await this.prismaService.user.update({
       where: { id: userId },
       data: { mfaSecret } as Prisma.UserUpdateInput,
     });
@@ -89,7 +103,7 @@ export class AuthService {
   }
 
   async markEmailAsVerified(userId: string): Promise<void> {
-    await this.prisma.user.update({
+    await this.prismaService.user.update({
       where: { id: userId },
       data: { isEmailVerified: true },
     });

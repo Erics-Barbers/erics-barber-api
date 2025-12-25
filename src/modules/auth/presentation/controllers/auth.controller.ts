@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, UseGuards } from '@nestjs/common';
 
 import { EnableMfaUseCase } from '../../application/use-cases/enable-mfa.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
@@ -14,6 +14,8 @@ import { MfaDto } from '../dto/mfa.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { AuthGuard } from 'src/common/guards/auth.guard';
+import { GetProfileUseCase } from '../../application/use-cases/get-profile.use-case';
+import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case';
 
 @Controller('auth')
 export class AuthController {
@@ -25,13 +27,16 @@ export class AuthController {
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
     private readonly resetPasswordEmailUseCase: ResetPasswordEmailUseCase,
     private readonly enableMFAUseCase: EnableMfaUseCase,
+    private readonly getProfileUseCase: GetProfileUseCase,
+    private readonly updateProfileUseCase: UpdateProfileUseCase,
   ) {}
 
   @Post('register')
   async register(@Body() dto: RegisterDto) {
     await this.registerUseCase.execute(dto);
     return {
-      message: 'User registered successfully. Check your email for verification link.',
+      message:
+        'User registered successfully. Check your email for verification link.',
     };
   }
 
@@ -50,7 +55,17 @@ export class AuthController {
   @UseGuards(AuthGuard)
   @Get('profile')
   async getProfile() {
-    // Implementation for fetching user profile goes here
+    // TODO: Replace 'userId-placeholder' with actual user ID from auth context
+    return await this.getProfileUseCase.execute('userId-placeholder');
+  }
+
+  @UseGuards(AuthGuard)
+  @Put('profile')
+  async updateProfile(@Body() profileData: any) {
+    return await this.updateProfileUseCase.execute(
+      'userId-placeholder',
+      profileData,
+    );
   }
 
   @Post('logout')

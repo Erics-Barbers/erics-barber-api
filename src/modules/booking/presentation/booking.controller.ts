@@ -39,7 +39,8 @@ export class BookingController {
   @Get(':id')
   @Roles(Role.Admin, Role.Customer, Role.Barber)
   async getBookingDetails(@Param('id') bookingId: string) {
-    const bookingDetails = await this.getBookingDetailsUseCase.execute(bookingId);
+    const bookingDetails =
+      await this.getBookingDetailsUseCase.execute(bookingId);
     return bookingDetails;
   }
 
