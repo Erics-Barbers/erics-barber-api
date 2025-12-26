@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { BcryptService } from '../services/bcrypt.service';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
-import { User, Session, Prisma } from 'generated/prisma/client';
+import { User, Session, Prisma } from 'src/generated/prisma/client';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
 
 @Injectable()
@@ -40,11 +40,15 @@ export class AuthService {
   }
 
   async findUserByEmail(email: string): Promise<User | null> {
-    return this.prismaService.user.findUnique({ where: { email } });
+    return await this.prismaService.user.findUnique({ where: { email } });
   }
 
   async createUser(data: Prisma.UserCreateInput): Promise<User> {
-    return this.prismaService.user.create({ data });
+    return await this.prismaService.user.create({ data });
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    await this.prismaService.user.delete({ where: { id: userId } });
   }
 
   async validateUserCredentials(
@@ -61,7 +65,7 @@ export class AuthService {
   }
 
   async createSession(data: Prisma.SessionCreateInput): Promise<Session> {
-    return this.prismaService.session.create({ data });
+    return await this.prismaService.session.create({ data });
   }
 
   async invalidateRefreshToken(

@@ -2,7 +2,7 @@
 /dist
 /node_modules
 /build
-/src/api/barber-booking-api
+/src/generated/
 
 # Logs
 logs

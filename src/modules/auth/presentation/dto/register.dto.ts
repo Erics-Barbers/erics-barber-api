@@ -10,5 +10,5 @@ export class RegisterDto {
     message:
       'Password must be at least 8 characters long and contain at least one letter and one number',
   })
-  readonly passwordHash: string;
+  readonly password: string;
 }

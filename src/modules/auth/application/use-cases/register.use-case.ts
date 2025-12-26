@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
 import { BcryptService } from '../../infrastructure/services/bcrypt.service';
 import { TokenService } from '../../infrastructure/services/jwt-token.service';
@@ -15,28 +15,26 @@ export class RegisterUseCase {
   async execute(data: RegisterDto): Promise<void> {
     await this.checkIfEmailIsInUse(data.email);
     await this.storeUserCredentials(data);
-
-    const tokens = await this.tokenService.generateTokens(data.email);
-    await this.authService.sendVerificationEmail(
-      data.email,
-      tokens.accessToken,
-    );
+    await this.sendVerificationEmail(data.email);
     return;
   }
 
   async checkIfEmailIsInUse(email: string): Promise<boolean> {
     const existingUser = await this.authService.findUserByEmail(email);
     if (existingUser) {
-      throw new Error('User with this email already exists');
+      throw new ConflictException('User with this email already exists');
     }
     return false;
   }
 
   async storeUserCredentials(data: RegisterDto): Promise<void> {
-    const hashedPassword = await this.bcryptService.hashPassword(
-      data.passwordHash,
-    );
+    const hashedPassword = await this.bcryptService.hashPassword(data.password);
     const hashedData = { email: data.email, passwordHash: hashedPassword };
     await this.authService.createUser(hashedData);
+  }
+
+  async sendVerificationEmail(email: string): Promise<void> {
+    const tokens = await this.tokenService.generateTokens(email);
+    await this.authService.sendVerificationEmail(email, tokens.accessToken);
   }
 }
