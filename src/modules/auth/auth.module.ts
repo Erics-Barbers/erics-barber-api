@@ -8,7 +8,7 @@ import { AuthController } from './presentation/controllers/auth.controller';
 // Providers
 import { AuthService } from './infrastructure/prisma/auth.prisma-repository';
 import { BcryptService } from './infrastructure/services/bcrypt.service';
-import { TokenService } from './infrastructure/services/jwt-token.service';
+import { TokenService } from './infrastructure/services/jwt.service';
 
 @Module({
   imports: [PrismaModule],

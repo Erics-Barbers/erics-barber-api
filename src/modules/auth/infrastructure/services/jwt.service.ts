@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { SignJWT, jwtVerify, decodeJwt, JWTPayload } from 'jose';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class TokenService {
   private readonly secret = process.env.JWT_SECRET!;
   private readonly defaultExpiresIn = '1h';
+  private readonly jwtService: JwtService;
+
+  constructor() {
+    this.jwtService = new JwtService({ secret: this.secret });
+  }
 
   private getJwtSecret(): Uint8Array {
     return new TextEncoder().encode(this.secret);
@@ -24,25 +29,23 @@ export class TokenService {
     const exp =
       iat + this.parseExpiresIn(options?.expiresIn || this.defaultExpiresIn);
 
-    return await new SignJWT({ ...payload })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt(iat)
-      .setExpirationTime(exp)
-      .sign(this.getJwtSecret());
+    return await this.jwtService.signAsync(
+      { ...payload, iat, exp },
+    );
   }
 
-  async verifyToken(token: string): Promise<JWTPayload | null> {
+  async verifyToken(token: string) {
     try {
-      const { payload } = await jwtVerify(token, this.getJwtSecret());
+      const { payload } = await this.jwtService.verifyAsync(token);
       return payload;
     } catch {
       return null;
     }
   }
 
-  decodeToken(token: string): JWTPayload | null {
+  decodeToken(token: string) {
     try {
-      return decodeJwt(token);
+      return this.jwtService.decode(token);
     } catch {
       return null;
     }

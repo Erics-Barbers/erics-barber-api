@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
-import { TokenService } from '../../infrastructure/services/jwt-token.service';
+import { TokenService } from '../../infrastructure/services/jwt.service';
 
 @Injectable()
 export class ResetPasswordEmailUseCase {

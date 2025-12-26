@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { TokenService } from '../../infrastructure/services/jwt-token.service';
+import { TokenService } from '../../infrastructure/services/jwt.service';
 import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
 import { AuthResponseDto } from '../../presentation/dto/auth-response.dto';
 

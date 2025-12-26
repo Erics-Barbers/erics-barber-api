@@ -9,11 +9,6 @@ describe('RegisterUseCase', () => {
   let tokenService: any;
 
   beforeEach(() => {
-    jest.mock('../../infrastructure/services/jwt-token.service', () => ({
-      TokenService: jest.fn().mockImplementation(() => ({
-        generateTokens: jest.fn(),
-      })),
-    }));
     authService = {
       findUserByEmail: jest.fn(),
       createUser: jest.fn(),
@@ -51,7 +46,7 @@ describe('RegisterUseCase', () => {
     expect(authService.createUser).toHaveBeenCalledWith({
       email: 'test@example.com',
       passwordHash:
-        '$2a$10$zt8Ya37VIV5XU4jp/H9ETuBc5kWWnl1GqfpvgyvQbTy9ZtDa95Dz6',
+        'hashedPassword',
     });
     expect(tokenService.generateTokens).toHaveBeenCalledWith(
       'test@example.com',
