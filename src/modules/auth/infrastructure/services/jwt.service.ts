@@ -11,10 +11,6 @@ export class TokenService {
     this.jwtService = new JwtService({ secret: this.secret });
   }
 
-  private getJwtSecret(): Uint8Array {
-    return new TextEncoder().encode(this.secret);
-  }
-
   async generateTokens(email: string) {
     const accessToken = await this.signToken({ email }, { expiresIn: '15m' });
     const refreshToken = await this.signToken({ email }, { expiresIn: '7d' });
