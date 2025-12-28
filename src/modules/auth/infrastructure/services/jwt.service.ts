@@ -25,9 +25,7 @@ export class TokenService {
     const exp =
       iat + this.parseExpiresIn(options?.expiresIn || this.defaultExpiresIn);
 
-    return await this.jwtService.signAsync(
-      { ...payload, iat, exp },
-    );
+    return await this.jwtService.signAsync({ ...payload, iat, exp });
   }
 
   async verifyToken(token: string) {

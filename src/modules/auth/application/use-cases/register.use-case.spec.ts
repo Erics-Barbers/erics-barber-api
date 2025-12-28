@@ -45,8 +45,7 @@ describe('RegisterUseCase', () => {
     expect(bcryptService.hashPassword).toHaveBeenCalledWith('Password1');
     expect(authService.createUser).toHaveBeenCalledWith({
       email: 'test@example.com',
-      passwordHash:
-        'hashedPassword',
+      passwordHash: 'hashedPassword',
     });
     expect(tokenService.generateTokens).toHaveBeenCalledWith(
       'test@example.com',
