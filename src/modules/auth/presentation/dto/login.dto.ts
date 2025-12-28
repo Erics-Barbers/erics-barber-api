@@ -1,7 +1,7 @@
 import { IsEmail, Length } from 'class-validator';
 
 export class LoginDto {
-  @IsEmail()
+  @IsEmail({}, { message: 'Email must be a valid email address' })
   readonly email: string;
 
   @Length(8, 20)
