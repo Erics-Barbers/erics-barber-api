@@ -20,6 +20,7 @@ import { BarbersController } from './modules/barbers/presentation/barbers.contro
     BarbersModule,
     BookingModule,
     ConfigModule,
+    HealthModule,
     PaymentsModule,
     NotificationsModule,
   ],
