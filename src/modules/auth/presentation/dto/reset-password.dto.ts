@@ -1,7 +1,7 @@
 import { IsEmail, IsString, Length, Matches } from 'class-validator';
 
 export class ResetPasswordDto {
-  @IsEmail()
+  @IsEmail({}, { message: 'Email must be a valid email address' })
   readonly email: string;
 
   @IsString()
