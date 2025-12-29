@@ -17,9 +17,9 @@ export class AuthService {
       where: { id: userId },
       select: {
         id: true,
+        name: true,
         email: true,
         isEmailVerified: true,
-        updatedAt: true,
       },
     });
     return user;

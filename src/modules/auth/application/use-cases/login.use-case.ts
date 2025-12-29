@@ -10,7 +10,9 @@ export class LoginUseCase {
     private readonly tokenService: TokenService,
   ) {}
 
-  async execute(dto: LoginDto) {
+  async execute(
+    dto: LoginDto,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     const user = await this.authService.validateUserCredentials(
       dto.email,
       dto.password,

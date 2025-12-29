@@ -1,6 +1,6 @@
 import { ConflictException } from '@nestjs/common';
-import { RegisterUseCase } from './register.use-case';
-import { RegisterDto } from '../../presentation/dto/register.dto';
+import { RegisterUseCase } from '../register.use-case';
+import { RegisterDto } from '../../../presentation/dto/register.dto';
 
 describe('RegisterUseCase', () => {
   let registerUseCase: RegisterUseCase;
@@ -27,7 +27,7 @@ describe('RegisterUseCase', () => {
     );
   });
 
-  it('should register a user successfully', async () => {
+  it('should register a user successfully and call all related services', async () => {
     authService.findUserByEmail.mockResolvedValue(null);
     bcryptService.hashPassword.mockResolvedValue('hashedPassword');
     tokenService.generateTokens.mockResolvedValue({ accessToken: 'token' });
@@ -69,6 +69,4 @@ describe('RegisterUseCase', () => {
       ConflictException,
     );
   });
-
-  // Add more tests as needed for error cases, etc.
 });

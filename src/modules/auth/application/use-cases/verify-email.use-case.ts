@@ -10,23 +10,30 @@ export class VerifyEmailUseCase {
     private readonly tokenService: TokenService,
   ) {}
   async execute(token: string): Promise<AuthResponseDto> {
+    const payload = await this.verifyToken(token);
+    const user = await this.markEmailAsVerified(payload.email as string);
+    return this.issueTokens({ id: user.id, email: user.email });
+  }
+
+  async verifyToken(token: string): Promise<any> {
     const payload = await this.tokenService.verifyToken(token);
     if (!payload || !payload.email) {
       throw new Error('Invalid or expired token');
     }
+    return payload;
+  }
 
-    const user = await this.authService.findUserByEmail(
-      payload.email as string,
-    );
+  async markEmailAsVerified(email: string): Promise<any> {
+    const user = await this.authService.findUserByEmail(email);
     if (!user) {
       throw new Error('User not found');
     }
-
     await this.authService.markEmailAsVerified(user.id);
-    const tokens = await this.tokenService.issueTokens({
-      id: user.id,
-      email: user.email,
-    });
+    return user;
+  }
+
+  async issueTokens(user: { id: string; email: string }) {
+    const tokens = await this.tokenService.issueTokens(user);
     return AuthResponseDto.create(tokens);
   }
 }
