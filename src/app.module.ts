@@ -13,6 +13,8 @@ import { BarbersService } from './modules/barbers/infrastructure/prisma/barbers.
 import { AuthController } from './modules/auth/presentation/controllers/auth.controller';
 import { BookingController } from './modules/booking/presentation/booking.controller';
 import { BarbersController } from './modules/barbers/presentation/barbers.controller';
+import { HealthModule } from './modules/health/health.module';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -23,6 +25,14 @@ import { BarbersController } from './modules/barbers/presentation/barbers.contro
     HealthModule,
     PaymentsModule,
     NotificationsModule,
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60000,
+          limit: 100,
+        },
+      ],
+    }),
   ],
   controllers: [
     AppController,

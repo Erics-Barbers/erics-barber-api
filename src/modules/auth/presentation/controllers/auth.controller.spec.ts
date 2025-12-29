@@ -16,7 +16,7 @@ import { ResetPasswordDto } from '../dto/reset-password.dto';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let tokenService = { verifyToken: jest.fn() } ;
+  let tokenService = { verifyToken: jest.fn() };
   let mockRegisterUseCase = { execute: jest.fn() };
   let mockVerifyEmailUseCase = { execute: jest.fn() };
   let mockLoginUseCase = { execute: jest.fn() };
@@ -86,7 +86,10 @@ describe('AuthController', () => {
 
     return controller.verifyEmail(token).then((response) => {
       expect(mockVerifyEmailUseCase.execute).toHaveBeenCalledWith(token);
-      expect(response).toEqual({ message: 'Email verified successfully', tokens: undefined });
+      expect(response).toEqual({
+        message: 'Email verified successfully',
+        tokens: undefined,
+      });
     });
   });
 
@@ -98,7 +101,10 @@ describe('AuthController', () => {
 
     return controller.login(dto).then((response) => {
       expect(mockLoginUseCase.execute).toHaveBeenCalledWith(dto);
-      expect(response).toEqual({ result: undefined, message: 'User logged in successfully' });
+      expect(response).toEqual({
+        result: undefined,
+        message: 'User logged in successfully',
+      });
     });
   });
 
