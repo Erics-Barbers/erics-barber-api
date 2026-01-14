@@ -7,12 +7,6 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { BarbersModule } from './modules/barbers/barbers.module';
-import { AuthService } from './modules/auth/infrastructure/prisma/auth.prisma-repository';
-import { BookingService } from './modules/booking/infrastructure/prisma/booking.prisma-repository';
-import { BarbersService } from './modules/barbers/infrastructure/prisma/barbers.prisma-repository';
-import { AuthController } from './modules/auth/presentation/controllers/auth.controller';
-import { BookingController } from './modules/booking/presentation/booking.controller';
-import { BarbersController } from './modules/barbers/presentation/barbers.controller';
 import { HealthModule } from './modules/health/health.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -34,12 +28,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
       ],
     }),
   ],
-  controllers: [
-    AppController,
-    AuthController,
-    BookingController,
-    BarbersController,
-  ],
-  providers: [AppService, AuthService, BookingService, BarbersService],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

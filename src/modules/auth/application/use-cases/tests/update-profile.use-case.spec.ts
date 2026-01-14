@@ -19,9 +19,6 @@ describe('UpdateProfileUseCase', () => {
     };
     authService.updateProfile.mockResolvedValue(undefined);
     await updateProfileUseCase.execute(userId, profileData);
-    expect(authService.updateProfile).toHaveBeenCalledWith(
-      userId,
-      profileData,
-    );
+    expect(authService.updateProfile).toHaveBeenCalledWith(userId, profileData);
   });
 });
