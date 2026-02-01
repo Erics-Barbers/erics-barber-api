@@ -28,18 +28,23 @@ export class TokenService {
     return await this.jwtService.signAsync({ ...payload, iat, exp });
   }
 
-  async verifyToken(token: string) {
+  async verifyToken(token: string): Promise<Record<string, unknown> | null> {
     try {
-      const { payload } = await this.jwtService.verifyAsync(token);
-      return payload;
+      const decoded =
+        await this.jwtService.verifyAsync<Record<string, unknown>>(token);
+      return decoded;
     } catch {
       return null;
     }
   }
 
-  decodeToken(token: string) {
+  decodeToken(token: string): Record<string, unknown> | null {
     try {
-      return this.jwtService.decode(token);
+      const decoded = this.jwtService.decode<Record<string, unknown>>(token);
+      if (decoded && typeof decoded === 'object') {
+        return decoded;
+      }
+      return null;
     } catch {
       return null;
     }

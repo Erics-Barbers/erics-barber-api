@@ -28,6 +28,7 @@ export class AuthService {
   async updateProfile(userId: string, profileData: any): Promise<any> {
     const updatedUser = await this.prismaService.user.update({
       where: { id: userId },
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       data: profileData,
       select: {
         id: true,
