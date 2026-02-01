@@ -18,7 +18,7 @@ export class SendVerificationEmailUseCase {
     }
 
     const token = await this.tokenService.generateTokens(user.email);
-    const verificationLink = `https://erics-barbers-luton.co.uk/verify-email?token=${token.accessToken}`;
+    const verificationLink = `https://erics-barbers-luton.co.uk/email-verify?token=${token.accessToken}`;
     await this.resendService.sendEmail(
       user.email,
       'Verify your email address',

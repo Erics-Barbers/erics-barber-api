@@ -30,6 +30,9 @@ import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile.use-case';
 import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case';
+import { VerifyEmailDto } from '../dto/verify-email.dto';
+import { SendVerificationDto } from '../dto/send-verification.dto';
+import { ResetPasswordEmailDto } from '../dto/reset-password-email.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -64,8 +67,8 @@ export class AuthController {
     description: 'Email verified successfully',
   })
   @Post('verify-email')
-  async verifyEmail(@Body('token') token: string) {
-    const tokens = await this.verifyEmailUseCase.execute(token);
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    const tokens = await this.verifyEmailUseCase.execute(dto.token);
     return { message: 'Email verified successfully', tokens };
   }
 
@@ -75,8 +78,8 @@ export class AuthController {
     description: 'Verification email sent successfully',
   })
   @Post('send-verification-email')
-  async sendVerificationEmail(@Body('email') email: string) {
-    await this.sendVerificationEmailUseCase.execute(email);
+  async sendVerificationEmail(@Body() dto: SendVerificationDto) {
+    await this.sendVerificationEmailUseCase.execute(dto.email);
     return { message: 'Verification email sent successfully' };
   }
 
@@ -131,8 +134,8 @@ export class AuthController {
     description: 'Password reset link sent to email if it exists',
   })
   @Post('reset-password-email')
-  async resetPasswordEmail(@Body('email') email: string) {
-    await this.resetPasswordEmailUseCase.execute(email);
+  async resetPasswordEmail(@Body() dto: ResetPasswordEmailDto) {
+    await this.resetPasswordEmailUseCase.execute(dto.email);
     return { message: 'Password reset link sent to email if it exists' };
   }
 
