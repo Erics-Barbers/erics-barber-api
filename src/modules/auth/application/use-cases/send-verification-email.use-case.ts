@@ -17,8 +17,9 @@ export class SendVerificationEmailUseCase {
       throw new Error('User not found');
     }
 
+    const clientBaseUrl = process.env.CLIENT_BASE_URL;
     const token = await this.tokenService.generateTokens(user.email);
-    const verificationLink = `https://erics-barbers-luton.co.uk/email-verify?token=${token.accessToken}`;
+    const verificationLink = `${clientBaseUrl}/email-verify?token=${token.accessToken}`;
     await this.resendService.sendEmail(
       user.email,
       'Verify your email address',
