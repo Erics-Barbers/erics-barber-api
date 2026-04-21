@@ -7,12 +7,12 @@ export class LogOutDto {
     description: 'Refresh token for logging out',
   })
   @IsString()
-  readonly refreshToken: string;
+  readonly refreshToken!: string;
 
   @ApiProperty({
     example: 'user-id-123',
     description: 'User ID associated with the refresh token',
   })
   @IsString()
-  readonly userId: string;
+  readonly userId!: string;
 }

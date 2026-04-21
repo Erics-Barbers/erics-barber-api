@@ -7,5 +7,5 @@ export class ResetPasswordEmailDto {
     example: 'user@example.com',
   })
   @IsEmail()
-  email: string;
+  email!: string;
 }

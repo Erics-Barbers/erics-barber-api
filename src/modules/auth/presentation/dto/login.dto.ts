@@ -7,7 +7,7 @@ export class LoginDto {
     description: 'User email address',
   })
   @IsEmail({}, { message: 'Email must be a valid email address' })
-  readonly email: string;
+  readonly email!: string;
 
   @ApiProperty({
     example: 'SecurePassword123',
@@ -15,5 +15,5 @@ export class LoginDto {
   })
   @IsEmail({}, { message: 'Password must be a valid string' })
   @Length(8, 20)
-  readonly password: string;
+  readonly password!: string;
 }

@@ -14,6 +14,12 @@ async function bootstrap() {
     .setDescription('Auth and Booking API for Barber Shop Application')
     .setVersion('1.0')
     .build();
+  config.servers = [
+    {
+      url: 'https://erics-barber-api.onrender.com',
+      description: 'Base URL for API',
+    },
+  ];
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
 
@@ -24,6 +30,7 @@ async function bootstrap() {
 
   // Start the application
   await app.listen(4000);
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 bootstrap();

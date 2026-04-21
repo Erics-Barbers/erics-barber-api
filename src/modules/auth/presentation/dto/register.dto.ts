@@ -7,7 +7,7 @@ export class RegisterDto {
     description: 'User email address',
   })
   @IsEmail({}, { message: 'Email must be a valid email address' })
-  readonly email: string;
+  readonly email!: string;
 
   @ApiProperty({
     example: 'Password123',
@@ -20,5 +20,5 @@ export class RegisterDto {
     message:
       'Password must be at least 8 characters long and contain at least one letter and one number',
   })
-  readonly password: string;
+  readonly password!: string;
 }

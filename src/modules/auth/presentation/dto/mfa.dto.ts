@@ -7,12 +7,12 @@ export class MfaDto {
     description: 'User ID for MFA verification',
   })
   @IsString()
-  readonly userId: string;
+  readonly userId!: string;
 
   @ApiProperty({
     example: '123456',
     description: 'MFA code for verification',
   })
   @IsString()
-  readonly mfaCode: string;
+  readonly mfaCode!: string;
 }

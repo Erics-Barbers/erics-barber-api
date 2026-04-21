@@ -7,5 +7,5 @@ export class SendVerificationDto {
     example: 'user@example.com',
   })
   @IsString()
-  email: string;
+  email!: string;
 }

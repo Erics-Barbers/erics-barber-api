@@ -19,11 +19,13 @@ export class SendVerificationEmailUseCase {
 
     const clientBaseUrl = process.env.CLIENT_BASE_URL;
     const token = await this.tokenService.generateTokens(user.email);
+    const subject = 'Verify Your Email';
     const verificationLink = `${clientBaseUrl}/email-verify?token=${token.accessToken}`;
-    await this.resendService.sendEmail(
-      user.email,
-      'Verify your email address',
-      `Please verify your email by clicking on the following link: ${verificationLink}`,
-    );
+    const emailContent = `
+      <h1>Email Verification</h1>
+      <p>Please verify your email by clicking the link below:</p>
+      <a href="${verificationLink}">Verify Email</a>
+    `;
+    await this.resendService.sendEmail(user.email, subject, emailContent);
   }
 }

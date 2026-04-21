@@ -63,16 +63,6 @@ export class AuthController {
   }
 
   @HttpCode(200)
-  @ApiOkResponse({
-    description: 'Email verified successfully',
-  })
-  @Post('verify-email')
-  async verifyEmail(@Body() dto: VerifyEmailDto) {
-    const tokens = await this.verifyEmailUseCase.execute(dto.token);
-    return { message: 'Email verified successfully', tokens };
-  }
-
-  @HttpCode(200)
   @ApiResponse({
     status: 200,
     description: 'Verification email sent successfully',
@@ -81,6 +71,16 @@ export class AuthController {
   async sendVerificationEmail(@Body() dto: SendVerificationDto) {
     await this.sendVerificationEmailUseCase.execute(dto.email);
     return { message: 'Verification email sent successfully' };
+  }
+
+  @HttpCode(200)
+  @ApiOkResponse({
+    description: 'Email verified successfully',
+  })
+  @Post('verify-email')
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    const tokens = await this.verifyEmailUseCase.execute(dto.token);
+    return { message: 'Email verified successfully', tokens };
   }
 
   @HttpCode(200)
