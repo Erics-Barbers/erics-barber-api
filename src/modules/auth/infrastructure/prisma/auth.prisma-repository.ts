@@ -97,7 +97,8 @@ export class AuthService {
   }
 
   async sendVerificationEmail(email: string, token: string): Promise<void> {
-    const verificationLink = `https://erics-barbers-luton.co.uk/verify-email?token=${token}`;
+    const clientBaseUrl = process.env.CLIENT_BASE_URL;
+    const verificationLink = `${clientBaseUrl}/email-verify?token=${token}`;
     const subject = 'Verify Your Email';
     const emailContent = `
       <h1>Email Verification</h1>
