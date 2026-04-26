@@ -1,4 +1,4 @@
-import { IsEmail, Length } from 'class-validator';
+import { IsEmail, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class LoginDto {
@@ -10,10 +10,10 @@ export class LoginDto {
   readonly email!: string;
 
   @ApiProperty({
-    example: 'SecurePassword123',
-    description: 'User password (8-20 characters)',
+    example: 'Password123!',
+    description:
+      'Password must be 8-20 characters long, contain at least one uppercase letter, one lowercase letter, one number, and one special character',
   })
-  @IsEmail({}, { message: 'Password must be a valid string' })
-  @Length(8, 20)
+  @IsString()
   readonly password!: string;
 }
