@@ -32,7 +32,10 @@ import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile.use-case';
 import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case';
-import { VerifyEmailDto } from '../dto/verify-email.dto';
+import {
+  VerifyEmailRequestDto,
+  VerifyEmailResponseDto,
+} from '../dto/verify-email.dto';
 import { SendVerificationDto } from '../dto/send-verification.dto';
 import { ResetPasswordEmailDto } from '../dto/reset-password-email.dto';
 import { RefreshTokenDto } from '../dto/refresh-token.dto';
@@ -87,10 +90,20 @@ export class AuthController {
   @Post('verify-email')
   async verifyEmail(
     @UserAgent() userAgent: string,
-    @Body() dto: VerifyEmailDto,
-  ) {
-    const tokens = await this.verifyEmailUseCase.execute(dto.token, userAgent);
-    return { message: 'Email verified successfully', tokens };
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: VerifyEmailRequestDto,
+  ): Promise<VerifyEmailResponseDto> {
+    const { accessToken, refreshToken } = await this.verifyEmailUseCase.execute(
+      dto.token,
+      userAgent,
+    );
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    return { message: 'Email verified successfully', accessToken };
   }
 
   @HttpCode(200)
@@ -101,10 +114,20 @@ export class AuthController {
   @Post('login')
   async login(
     @UserAgent() userAgent: string,
+    @Res({ passthrough: true }) res: Response,
     @Body() dto: LoginRequestDto,
   ): Promise<LoginResponseDto> {
-    const result = await this.loginUseCase.execute(dto, userAgent);
-    return { result, message: 'User logged in successfully' };
+    const { accessToken, refreshToken } = await this.loginUseCase.execute(
+      dto,
+      userAgent,
+    );
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    return { accessToken, message: 'User logged in successfully' };
   }
 
   @HttpCode(200)
@@ -181,7 +204,7 @@ export class AuthController {
   async refreshTokens(
     @Req() req: Request,
     @Body() dto: RefreshTokenDto,
-    @Res() res: Response,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const oldRefreshToken = req.cookies['refreshToken'] as string;
     const { accessToken, refreshToken } =
@@ -190,7 +213,6 @@ export class AuthController {
       httpOnly: true,
       secure: true,
       sameSite: 'strict',
-      path: '/auth/refresh',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 

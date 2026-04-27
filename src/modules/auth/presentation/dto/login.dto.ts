@@ -25,9 +25,8 @@ export class LoginResponseDto {
   @ApiProperty({
     example: {
       accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-      refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
     },
-    description: 'Authentication tokens',
+    description: 'Access token',
   })
-  result!: { accessToken: string; refreshToken: string };
+  accessToken!: string;
 }

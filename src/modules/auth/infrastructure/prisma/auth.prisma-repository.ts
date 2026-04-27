@@ -96,7 +96,7 @@ export class AuthService {
     await this.prismaService.session.deleteMany({
       where: {
         userId,
-        hashedToken,
+        refreshToken: hashedToken,
       },
     });
   }
