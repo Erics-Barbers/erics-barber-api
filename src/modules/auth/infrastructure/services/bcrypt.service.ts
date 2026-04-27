@@ -5,14 +5,14 @@ import { hash, compare } from 'bcrypt';
 export class BcryptService {
   private readonly saltRounds = 10;
 
-  async hashPassword(password: string): Promise<string> {
+  async hashInput(password: string): Promise<string> {
     return hash(password, this.saltRounds);
   }
 
-  async comparePasswords(
-    password: string,
-    hashedPassword: string,
+  async compareHashedInput(
+    input: string,
+    hashedInput: string,
   ): Promise<boolean> {
-    return compare(password, hashedPassword);
+    return compare(input, hashedInput);
   }
 }

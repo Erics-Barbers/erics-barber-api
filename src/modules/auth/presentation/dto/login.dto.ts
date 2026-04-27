@@ -1,7 +1,7 @@
 import { IsEmail, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class LoginDto {
+export class LoginRequestDto {
   @ApiProperty({
     example: 'user@example.com',
     description: 'User email address',
@@ -16,4 +16,18 @@ export class LoginDto {
   })
   @IsString()
   readonly password!: string;
+}
+
+export class LoginResponseDto {
+  @ApiProperty({ example: 'User logged in successfully' })
+  message!: string;
+
+  @ApiProperty({
+    example: {
+      accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+      refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    },
+    description: 'Authentication tokens',
+  })
+  result!: { accessToken: string; refreshToken: string };
 }

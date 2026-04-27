@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { BcryptService } from '../services/bcrypt.service';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
-import { User, Session, Prisma } from 'src/generated/prisma/client';
+import { User, Prisma, Session } from 'src/generated/prisma/client';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
 
 @Injectable()
@@ -58,31 +58,51 @@ export class AuthService {
   ): Promise<User | null> {
     const user = await this.findUserByEmail(email);
     if (!user) return null;
-    const isValid = await this.bcryptService.comparePasswords(
+    const isValid = await this.bcryptService.compareHashedInput(
       password,
       user.passwordHash!,
     );
     return isValid ? user : null;
   }
 
-  async createSession(data: Prisma.SessionCreateInput): Promise<Session> {
-    return await this.prismaService.session.create({ data });
+  async createSession(data: Prisma.SessionCreateInput): Promise<void> {
+    await this.prismaService.session.create({ data });
   }
+
+  async findSession(
+    userId: string,
+    refreshToken: string,
+  ): Promise<Session | null> {
+    return await this.prismaService.session.findUnique({
+      where: { id: userId, refreshToken },
+    });
+  }
+
+  // async rotateRefreshToken(
+  //   userId: string,
+  //   refreshToken: string,
+  // ): Promise<{ refreshToken: string }> {
+  //   await this.invalidateRefreshToken(userId, refreshToken);
+  //   await this.createSession(data);
+
+  //   return
+  // }
 
   async invalidateRefreshToken(
     userId: string,
     refreshToken: string,
   ): Promise<void> {
+    const hashedToken = await this.bcryptService.hashInput(refreshToken);
     await this.prismaService.session.deleteMany({
       where: {
         userId,
-        refreshToken,
+        hashedToken,
       },
     });
   }
 
   async resetPassword(email: string, newPassword: string): Promise<void> {
-    const passwordHash = await this.bcryptService.hashPassword(newPassword);
+    const passwordHash = await this.bcryptService.hashInput(newPassword);
     await this.prismaService.user.update({
       where: { email },
       data: { passwordHash },
@@ -116,7 +136,8 @@ export class AuthService {
   }
 
   async sendResetPasswordEmail(email: string, token: string): Promise<void> {
-    const resetLink = `https://erics-barbers-luton.co.uk/reset-password?token=${token}`;
+    const clientBaseUrl = process.env.CLIENT_BASE_URL;
+    const resetLink = `${clientBaseUrl}/reset-password?token=${token}`;
     const subject = 'Reset Your Password';
     const emailContent = `
       <h1>Password Reset</h1>

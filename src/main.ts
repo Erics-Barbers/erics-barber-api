@@ -3,6 +3,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import cookieParser = require('cookie-parser');
 
 async function bootstrap() {
   // Create the NestJS application
@@ -27,6 +29,7 @@ async function bootstrap() {
   app.use(helmet());
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe());
+  app.use(cookieParser());
 
   // Start the application
   await app.listen(4000);

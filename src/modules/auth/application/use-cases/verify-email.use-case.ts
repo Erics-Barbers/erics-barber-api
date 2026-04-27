@@ -3,18 +3,24 @@ import { TokenService } from '../../infrastructure/services/jwt.service';
 import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
 import { AuthResponseDto } from '../../presentation/dto/auth-response.dto';
 import { User } from 'src/generated/prisma/client';
+import { SessionCreateInput } from 'src/generated/prisma/models/Session';
+import { BcryptService } from '../../infrastructure/services/bcrypt.service';
 
 @Injectable()
 export class VerifyEmailUseCase {
   constructor(
     private readonly authService: AuthService,
     private readonly tokenService: TokenService,
+    private readonly bcryptService: BcryptService,
   ) {}
 
-  async execute(token: string): Promise<AuthResponseDto> {
+  async execute(token: string, userAgent: string): Promise<AuthResponseDto> {
     const payload = await this.verifyToken(token);
     const user = await this.markEmailAsVerified(payload.email as string);
-    return this.issueTokens({ id: user.id, email: user.email });
+    return await this.issueTokens(
+      { id: user.id, email: user.email },
+      userAgent,
+    );
   }
 
   async verifyToken(token: string): Promise<Record<string, unknown>> {
@@ -34,8 +40,22 @@ export class VerifyEmailUseCase {
     return user;
   }
 
-  async issueTokens(user: { id: string; email: string }) {
+  async issueTokens(user: { id: string; email: string }, userAgent: string) {
     const tokens = await this.tokenService.issueTokens(user);
+    const decoded: any = this.tokenService.decodeToken(tokens.refreshToken);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const expiresAt = new Date(decoded.exp * 1000);
+    const hashedRefreshToken = await this.bcryptService.hashInput(
+      tokens.refreshToken,
+    );
+    const sessionData: SessionCreateInput = {
+      user: { connect: { id: user.id } },
+      refreshToken: hashedRefreshToken,
+      expiresAt,
+      userAgent,
+    };
+
+    await this.authService.createSession(sessionData);
     return AuthResponseDto.create(tokens);
   }
 }

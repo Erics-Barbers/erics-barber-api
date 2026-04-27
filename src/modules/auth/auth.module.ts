@@ -20,6 +20,7 @@ import { ResetPasswordUseCase } from './application/use-cases/reset-password.use
 import { UpdateProfileUseCase } from './application/use-cases/update-profile.use-case';
 import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-case';
 import { SendVerificationEmailUseCase } from './application/use-cases/send-verification-email.use-case';
+import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case';
 
 @Module({
   imports: [PrismaModule],
@@ -41,6 +42,7 @@ import { SendVerificationEmailUseCase } from './application/use-cases/send-verif
     GetProfileUseCase,
     UpdateProfileUseCase,
     SendVerificationEmailUseCase,
+    RefreshTokenUseCase,
   ],
   exports: [AuthService, TokenService],
 })

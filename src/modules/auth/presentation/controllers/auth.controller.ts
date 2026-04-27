@@ -5,6 +5,8 @@ import {
   HttpCode,
   Post,
   Put,
+  Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -22,7 +24,7 @@ import { ResetPasswordEmailUseCase } from '../../application/use-cases/reset-pas
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email.use-case';
 import { SendVerificationEmailUseCase } from '../../application/use-cases/send-verification-email.use-case';
 
-import { LoginDto } from '../dto/login.dto';
+import { LoginRequestDto, LoginResponseDto } from '../dto/login.dto';
 import { LogOutDto } from '../dto/logout.dto';
 import { MfaDto } from '../dto/mfa.dto';
 import { RegisterDto } from '../dto/register.dto';
@@ -33,6 +35,10 @@ import { UpdateProfileUseCase } from '../../application/use-cases/update-profile
 import { VerifyEmailDto } from '../dto/verify-email.dto';
 import { SendVerificationDto } from '../dto/send-verification.dto';
 import { ResetPasswordEmailDto } from '../dto/reset-password-email.dto';
+import { RefreshTokenDto } from '../dto/refresh-token.dto';
+import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case';
+import { UserAgent } from 'src/common/decorators/user-agent.decorator';
+import { Request, Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -47,6 +53,7 @@ export class AuthController {
     private readonly getProfileUseCase: GetProfileUseCase,
     private readonly updateProfileUseCase: UpdateProfileUseCase,
     private readonly sendVerificationEmailUseCase: SendVerificationEmailUseCase,
+    private readonly refreshTokenUseCase: RefreshTokenUseCase,
   ) {}
 
   @HttpCode(201)
@@ -78,18 +85,25 @@ export class AuthController {
     description: 'Email verified successfully',
   })
   @Post('verify-email')
-  async verifyEmail(@Body() dto: VerifyEmailDto) {
-    const tokens = await this.verifyEmailUseCase.execute(dto.token);
+  async verifyEmail(
+    @UserAgent() userAgent: string,
+    @Body() dto: VerifyEmailDto,
+  ) {
+    const tokens = await this.verifyEmailUseCase.execute(dto.token, userAgent);
     return { message: 'Email verified successfully', tokens };
   }
 
   @HttpCode(200)
   @ApiOkResponse({
     description: 'User logged in successfully',
+    type: LoginResponseDto,
   })
   @Post('login')
-  async login(@Body() dto: LoginDto) {
-    const result = await this.loginUseCase.execute(dto);
+  async login(
+    @UserAgent() userAgent: string,
+    @Body() dto: LoginRequestDto,
+  ): Promise<LoginResponseDto> {
+    const result = await this.loginUseCase.execute(dto, userAgent);
     return { result, message: 'User logged in successfully' };
   }
 
@@ -157,5 +171,29 @@ export class AuthController {
   async verifyMFA(@Body() dto: MfaDto) {
     await this.enableMFAUseCase.execute(dto);
     return { message: 'MFA enabled successfully' };
+  }
+
+  @HttpCode(200)
+  @ApiOkResponse({
+    description: 'Refresh tokens created successfully',
+  })
+  @Post('refresh')
+  async refreshTokens(
+    @Req() req: Request,
+    @Body() dto: RefreshTokenDto,
+    @Res() res: Response,
+  ) {
+    const oldRefreshToken = req.cookies['refreshToken'] as string;
+    const { accessToken, refreshToken } =
+      await this.refreshTokenUseCase.execute(dto, oldRefreshToken);
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      path: '/auth/refresh',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return { accessToken, message: 'Access token refreshed successfully' };
   }
 }
