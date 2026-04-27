@@ -29,6 +29,8 @@ model User {
 model Barber {
   id        String   @id @default(cuid())
   userId    String   @unique
+  displayName    String    @unique
+  isActive  Boolean  @default(true)
   phone     String   @unique
   createdAt DateTime @default(now())
 
