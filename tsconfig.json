@@ -16,7 +16,8 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
     // "ignoreDeprecations": "6.0",
+    "typeRoots": ["./node_modules/@types", "./src/common/types"],
   }
 }
