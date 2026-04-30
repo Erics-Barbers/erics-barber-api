@@ -5,6 +5,7 @@ import { AppModule } from './app.module';
 import helmet from 'helmet';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import cookieParser = require('cookie-parser');
+import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 
 async function bootstrap() {
   // Create the NestJS application
@@ -14,6 +15,12 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle("Eric's Barber API")
     .setDescription('Auth and Booking API for Barber Shop Application')
+    .setContact(
+      'Fahmid Haque',
+      'https://www.linkedin.com/in/fahmid-h-b7a96b123/',
+      'fahmidulhaque97@pm.me',
+    )
+    .setLicense('MIT', 'https://mit-license.org/')
     .setVersion('1.0')
     .build();
   config.servers = [
@@ -26,8 +33,14 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, documentFactory);
 
   // Global Middlewares and Pipes
+  const corsOptions: CorsOptions = {
+    origin: process.env.CLIENT_BASE_URL,
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
+
   app.use(helmet());
-  app.enableCors();
+  app.enableCors(corsOptions);
   app.useGlobalPipes(new ValidationPipe());
   app.use(cookieParser());
 
