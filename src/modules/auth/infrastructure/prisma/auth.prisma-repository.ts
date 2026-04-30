@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { BcryptService } from '../services/bcrypt.service';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { User, Prisma, Session } from 'src/generated/prisma/client';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
+import { UserProfile } from 'src/common/types/profile';
 
 @Injectable()
 export class AuthService {
@@ -12,7 +13,7 @@ export class AuthService {
     private readonly resendService: ResendService,
   ) {}
 
-  async getProfile(userId: string): Promise<any> {
+  async getProfile(userId: string): Promise<UserProfile> {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
       select: {
@@ -22,21 +23,24 @@ export class AuthService {
         isEmailVerified: true,
       },
     });
+    if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
-  async updateProfile(userId: string, profileData: any): Promise<any> {
+  async updateProfile(userId: string, profileData: any): Promise<UserProfile> {
     const updatedUser = await this.prismaService.user.update({
       where: { id: userId },
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       data: profileData,
       select: {
+        name: true,
         id: true,
         email: true,
         isEmailVerified: true,
         updatedAt: true,
       },
     });
+    if (!updatedUser) throw new NotFoundException('Current user not found');
     return updatedUser;
   }
 

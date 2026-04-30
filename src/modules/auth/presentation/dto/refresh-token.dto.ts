@@ -1,7 +1,7 @@
 import { IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class RefreshTokenDto {
+export class RefreshTokenRequestDto {
   @ApiProperty({
     example: 'user-id-123',
     description: 'User ID',
@@ -15,4 +15,19 @@ export class RefreshTokenDto {
   })
   @IsString()
   readonly email!: string;
+}
+
+export class RefreshTokenResponseDto {
+  @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'Access token',
+  })
+  @IsString()
+  readonly accessToken!: string;
+
+  @ApiProperty({
+    description: 'Success message',
+  })
+  @IsString()
+  readonly message!: string;
 }

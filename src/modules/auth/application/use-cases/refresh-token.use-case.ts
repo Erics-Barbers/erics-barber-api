@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
-import { RefreshTokenDto } from '../../presentation/dto/refresh-token.dto';
+import { RefreshTokenRequestDto } from '../../presentation/dto/refresh-token.dto';
 import { TokenService } from '../../infrastructure/services/jwt.service';
 import { BcryptService } from '../../infrastructure/services/bcrypt.service';
 import { AuthResponseDto } from '../../presentation/dto/auth-response.dto';
@@ -15,7 +15,7 @@ export class RefreshTokenUseCase {
   ) {}
 
   async execute(
-    dto: RefreshTokenDto,
+    dto: RefreshTokenRequestDto,
     refreshToken: string,
   ): Promise<AuthResponseDto> {
     await this.checkTokenIsValid(dto, refreshToken);
@@ -23,7 +23,7 @@ export class RefreshTokenUseCase {
     return tokens;
   }
 
-  async checkTokenIsValid(dto: RefreshTokenDto, refreshToken: string) {
+  async checkTokenIsValid(dto: RefreshTokenRequestDto, refreshToken: string) {
     const hashedToken = await this.bcryptService.hashInput(refreshToken);
     const session = await this.authService.findSession(dto.userId, hashedToken);
     if (!session) {
@@ -45,7 +45,7 @@ export class RefreshTokenUseCase {
     }
   }
 
-  async rotateRefreshToken(dto: RefreshTokenDto, refreshToken: string) {
+  async rotateRefreshToken(dto: RefreshTokenRequestDto, refreshToken: string) {
     const hashedToken = await this.bcryptService.hashInput(refreshToken);
     const user = { id: dto.userId, email: dto.email };
     await this.authService.invalidateRefreshToken(dto.userId, hashedToken);

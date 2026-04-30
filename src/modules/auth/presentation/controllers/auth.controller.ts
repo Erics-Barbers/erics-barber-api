@@ -38,10 +38,15 @@ import {
 } from '../dto/verify-email.dto';
 import { SendVerificationDto } from '../dto/send-verification.dto';
 import { ResetPasswordEmailDto } from '../dto/reset-password-email.dto';
-import { RefreshTokenDto } from '../dto/refresh-token.dto';
+import {
+  RefreshTokenRequestDto,
+  RefreshTokenResponseDto,
+} from '../dto/refresh-token.dto';
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case';
 import { UserAgent } from 'src/common/decorators/user-agent.decorator';
 import { Request, Response } from 'express';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { UserProfile } from 'src/common/types/profile';
 
 @Controller('auth')
 export class AuthController {
@@ -86,6 +91,7 @@ export class AuthController {
   @HttpCode(200)
   @ApiOkResponse({
     description: 'Email verified successfully',
+    type: VerifyEmailResponseDto,
   })
   @Post('verify-email')
   async verifyEmail(
@@ -99,8 +105,9 @@ export class AuthController {
     );
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
+      path: '/auth/refresh',
       secure: true,
-      sameSite: 'strict',
+      sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     return { message: 'Email verified successfully', accessToken };
@@ -123,8 +130,9 @@ export class AuthController {
     );
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
+      path: '/auth/refresh',
       secure: true,
-      sameSite: 'strict',
+      sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     return { accessToken, message: 'User logged in successfully' };
@@ -136,10 +144,8 @@ export class AuthController {
   })
   @UseGuards(AuthGuard)
   @Get('profile')
-  async getProfile() {
-    // TODO: Replace 'userId-placeholder' with actual user ID from auth context
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return await this.getProfileUseCase.execute('userId-placeholder');
+  async getProfile(@CurrentUser() userId: string) {
+    return await this.getProfileUseCase.execute(userId);
   }
 
   @HttpCode(200)
@@ -148,12 +154,11 @@ export class AuthController {
   })
   @UseGuards(AuthGuard)
   @Put('profile')
-  async updateProfile(@Body() profileData: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return await this.updateProfileUseCase.execute(
-      'userId-placeholder',
-      profileData,
-    );
+  async updateProfile(
+    @CurrentUser() userId: string,
+    @Body() profileData: UserProfile,
+  ) {
+    return await this.updateProfileUseCase.execute(userId, profileData);
   }
 
   @HttpCode(200)
@@ -161,8 +166,18 @@ export class AuthController {
     description: 'User logged out successfully',
   })
   @Post('logout')
-  async logout(@Body() dto: LogOutDto) {
+  async logout(
+    @Body() dto: LogOutDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     await this.logoutUseCase.execute(dto);
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      path: '/auth/refresh',
+      secure: true,
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
     return { message: 'User logged out successfully' };
   }
 
@@ -199,20 +214,22 @@ export class AuthController {
   @HttpCode(200)
   @ApiOkResponse({
     description: 'Refresh tokens created successfully',
+    type: RefreshTokenResponseDto,
   })
   @Post('refresh')
   async refreshTokens(
     @Req() req: Request,
-    @Body() dto: RefreshTokenDto,
+    @Body() dto: RefreshTokenRequestDto,
     @Res({ passthrough: true }) res: Response,
-  ) {
+  ): Promise<RefreshTokenResponseDto> {
     const oldRefreshToken = req.cookies['refreshToken'] as string;
     const { accessToken, refreshToken } =
       await this.refreshTokenUseCase.execute(dto, oldRefreshToken);
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
+      path: '/auth/refresh',
       secure: true,
-      sameSite: 'strict',
+      sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 

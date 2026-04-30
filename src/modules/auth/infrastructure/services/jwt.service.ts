@@ -1,6 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
+// Token payloads and result types
+export interface AccessTokenPayload {
+  sub?: string;
+  email: string;
+  iat: number;
+  exp: number;
+  role?: string;
+}
+
+export interface RefreshTokenPayload {
+  sub?: string;
+  iat: number;
+  exp: number;
+}
+
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface UserTokenInfo {
+  id: string;
+  email: string;
+}
+
 @Injectable()
 export class TokenService {
   private readonly secret = process.env.JWT_SECRET!;
@@ -11,46 +36,28 @@ export class TokenService {
     this.jwtService = new JwtService({ secret: this.secret });
   }
 
-  async generateTokens(email: string) {
-    const accessToken = await this.signToken({ email }, { expiresIn: '15m' });
-    const refreshToken = await this.signToken({ email }, { expiresIn: '7d' });
-    return { accessToken, refreshToken };
-  }
-
-  async signToken(
-    payload: object,
+  async signToken<T extends object>(
+    payload: T,
     options?: { expiresIn?: string },
   ): Promise<string> {
     const iat = Math.floor(Date.now() / 1000);
     const exp =
       iat + this.parseExpiresIn(options?.expiresIn || this.defaultExpiresIn);
-
     return await this.jwtService.signAsync({ ...payload, iat, exp });
   }
 
-  async verifyToken(token: string): Promise<Record<string, unknown> | null> {
-    try {
-      const decoded =
-        await this.jwtService.verifyAsync<Record<string, unknown>>(token);
-      return decoded;
-    } catch {
-      return null;
-    }
+  async generateTokens(email: string): Promise<TokenPair> {
+    const accessToken = await this.signToken<Pick<AccessTokenPayload, 'email'>>(
+      { email },
+      { expiresIn: '15m' },
+    );
+    const refreshToken = await this.signToken<
+      Pick<AccessTokenPayload, 'email'>
+    >({ email }, { expiresIn: '7d' });
+    return { accessToken, refreshToken };
   }
 
-  decodeToken(token: string): Record<string, unknown> | null {
-    try {
-      const decoded = this.jwtService.decode<Record<string, unknown>>(token);
-      if (decoded && typeof decoded === 'object') {
-        return decoded;
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  }
-
-  async issueTokens(user: { id: string; email: string }) {
+  async issueTokens(user: UserTokenInfo): Promise<TokenPair> {
     const accessToken = await this.signToken(
       { sub: user.id, email: user.email },
       { expiresIn: '15m' },
@@ -60,6 +67,33 @@ export class TokenService {
       { expiresIn: '7d' },
     );
     return { accessToken, refreshToken };
+  }
+
+  async verifyToken(
+    token: string,
+  ): Promise<AccessTokenPayload | RefreshTokenPayload | null> {
+    try {
+      const decoded = await this.jwtService.verifyAsync<
+        AccessTokenPayload | RefreshTokenPayload
+      >(token);
+      return decoded;
+    } catch {
+      return null;
+    }
+  }
+
+  decodeToken(token: string): AccessTokenPayload | RefreshTokenPayload | null {
+    try {
+      const decoded = this.jwtService.decode<
+        AccessTokenPayload | RefreshTokenPayload
+      >(token);
+      if (decoded && typeof decoded === 'object') {
+        return decoded;
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   // Helper to parse '1h', '15m', etc. to seconds
