@@ -18,8 +18,10 @@ import { GetBookingsQueryDto } from './dto/get-booking.dto';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/constants/role.enum';
+import { BookingGuard } from 'src/common/guards/booking.guard';
 
 @UseGuards(AuthGuard)
+@UseGuards(BookingGuard)
 @Controller('booking')
 export class BookingController {
   constructor(
