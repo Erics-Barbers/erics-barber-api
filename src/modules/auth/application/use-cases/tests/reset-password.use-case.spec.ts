@@ -1,3 +1,5 @@
+jest.mock('src/infrastructure/mail/resend.service');
+
 import { ResetPasswordDto } from 'src/modules/auth/presentation/dto/reset-password.dto';
 import { ResetPasswordUseCase } from '../reset-password.use-case';
 

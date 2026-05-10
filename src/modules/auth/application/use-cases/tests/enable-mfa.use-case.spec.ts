@@ -1,3 +1,5 @@
+jest.mock('src/infrastructure/mail/resend.service');
+
 import { MfaDto } from '../../../presentation/dto/mfa.dto';
 import { EnableMfaUseCase } from '../enable-mfa.use-case';
 

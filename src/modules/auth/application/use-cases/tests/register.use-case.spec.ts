@@ -1,3 +1,5 @@
+jest.mock('src/infrastructure/mail/resend.service');
+
 import { ConflictException } from '@nestjs/common';
 import { RegisterUseCase } from '../register.use-case';
 import { RegisterDto } from '../../../presentation/dto/register.dto';
@@ -15,7 +17,7 @@ describe('RegisterUseCase', () => {
       sendVerificationEmail: jest.fn(),
     };
     bcryptService = {
-      hashPassword: jest.fn(),
+      hashInput: jest.fn(),
     };
     tokenService = {
       generateTokens: jest.fn(),
@@ -29,7 +31,7 @@ describe('RegisterUseCase', () => {
 
   it('should register a user successfully and call all related services', async () => {
     authService.findUserByEmail.mockResolvedValue(null);
-    bcryptService.hashPassword.mockResolvedValue('hashedPassword');
+    bcryptService.hashInput.mockResolvedValue('hashedPassword');
     tokenService.generateTokens.mockResolvedValue({ accessToken: 'token' });
     authService.createUser.mockResolvedValue(undefined);
     authService.sendVerificationEmail.mockResolvedValue(undefined);
@@ -42,7 +44,7 @@ describe('RegisterUseCase', () => {
     expect(authService.findUserByEmail).toHaveBeenCalledWith(
       'test@example.com',
     );
-    expect(bcryptService.hashPassword).toHaveBeenCalledWith('Password1');
+    expect(bcryptService.hashInput).toHaveBeenCalledWith('Password1');
     expect(authService.createUser).toHaveBeenCalledWith({
       email: 'test@example.com',
       passwordHash: 'hashedPassword',

@@ -1,3 +1,5 @@
+jest.mock('src/infrastructure/mail/resend.service');
+
 import { LogOutDto } from 'src/modules/auth/presentation/dto/logout.dto';
 import { LogoutUseCase } from '../logout.use-case';
 

@@ -92,6 +92,9 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "setupFiles": [
+      "<rootDir>/src/test-setup.ts"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],

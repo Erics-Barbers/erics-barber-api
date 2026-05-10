@@ -1,3 +1,5 @@
+jest.mock('src/infrastructure/mail/resend.service');
+
 import { GetProfileUseCase } from '../get-profile.use-case';
 
 describe('GetProfileUseCase', () => {

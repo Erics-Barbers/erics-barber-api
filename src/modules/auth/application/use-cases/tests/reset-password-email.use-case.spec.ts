@@ -1,3 +1,5 @@
+jest.mock('src/infrastructure/mail/resend.service');
+
 import { ResetPasswordEmailUseCase } from '../reset-password-email.use-case';
 
 describe('ResetPasswordEmailUseCase', () => {
