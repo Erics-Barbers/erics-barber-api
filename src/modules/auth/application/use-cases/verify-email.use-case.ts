@@ -1,6 +1,9 @@
-/* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
-import { AccessTokenPayload, RefreshTokenPayload, TokenService } from '../../infrastructure/services/jwt.service';
+import {
+  AccessTokenPayload,
+  RefreshTokenPayload,
+  TokenService,
+} from '../../infrastructure/services/jwt.service';
 import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
 import { AuthResponseDto } from '../../presentation/dto/auth-response.dto';
 import { User } from 'src/generated/prisma/client';
@@ -18,14 +21,13 @@ export class VerifyEmailUseCase {
   async execute(token: string, userAgent: string): Promise<AuthResponseDto> {
     const payload = await this.verifyToken(token);
     const user = await this.markEmailAsVerified(payload.email);
-    return await this.issueTokens(
-      { id: user.id, email: user.email },
-      userAgent,
-    );
+    return await this.issueTokens(user, userAgent);
   }
 
   async verifyToken(token: string): Promise<AccessTokenPayload> {
-    const payload = await this.tokenService.verifyToken(token) as AccessTokenPayload;
+    const payload = (await this.tokenService.verifyToken(
+      token,
+    )) as AccessTokenPayload;
     if (!payload || !payload.email) {
       throw new Error('Invalid or expired token');
     }
@@ -41,9 +43,11 @@ export class VerifyEmailUseCase {
     return user;
   }
 
-  async issueTokens(user: { id: string; email: string }, userAgent: string) {
+  async issueTokens(user: User, userAgent: string) {
     const tokens = await this.tokenService.issueTokens(user);
-    const decoded = this.tokenService.decodeToken(tokens.refreshToken) as RefreshTokenPayload;
+    const decoded = this.tokenService.decodeToken(
+      tokens.refreshToken,
+    ) as RefreshTokenPayload;
     const expiresAt = new Date(decoded.exp * 1000);
     const hashedRefreshToken = await this.bcryptService.hashInput(
       tokens.refreshToken,

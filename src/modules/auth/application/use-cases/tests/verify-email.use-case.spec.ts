@@ -32,6 +32,7 @@ describe('VerifyEmailUseCase', () => {
     const mockUser = {
       id: 'userId',
       email: 'test@example.com',
+      role: 'CUSTOMER',
       isEmailVerified: false,
     };
     tokenService.verifyToken.mockResolvedValue(mockPayload);

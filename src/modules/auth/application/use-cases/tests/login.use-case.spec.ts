@@ -26,6 +26,7 @@ describe('LoginUseCase', () => {
     const mockUser = {
       id: 'userId',
       email: 'test@example.com',
+      role: 'CUSTOMER',
       isEmailVerified: true,
     };
     authService.validateUserCredentials.mockResolvedValue(mockUser);
@@ -63,6 +64,7 @@ describe('LoginUseCase', () => {
     const mockUser = {
       id: 'userId',
       email: 'test@example.com',
+      role: 'CUSTOMER',
       isEmailVerified: false,
     };
     authService.validateUserCredentials.mockResolvedValue(mockUser);

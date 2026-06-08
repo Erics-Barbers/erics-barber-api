@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import 'express';
 
 declare module 'express-serve-static-core' {
@@ -8,8 +7,7 @@ declare module 'express-serve-static-core' {
       email?: string;
       iat?: number;
       exp?: number;
-      // optionally add role later if you include it in JWT
-      // role?: "ADMIN" | "BARBER" | "CUSTOMER";
+      role?: string;
       [key: string]: any;
     };
   }

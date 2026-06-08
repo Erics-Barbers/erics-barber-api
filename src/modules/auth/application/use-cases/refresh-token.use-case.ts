@@ -23,7 +23,12 @@ export class RefreshTokenUseCase {
     }
 
     const accessToken = await this.tokenService.signToken(
-      { sub: user.id, email: user.email, tokenType: 'access' },
+      {
+        sub: user.id,
+        email: user.email,
+        role: user.role ?? undefined,
+        tokenType: 'access',
+      },
       { expiresIn: '15m' },
     );
 

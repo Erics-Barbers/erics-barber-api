@@ -26,6 +26,7 @@ export interface TokenPair {
 export interface UserTokenInfo {
   id: string;
   email: string;
+  role?: string | null;
 }
 
 @Injectable()
@@ -64,7 +65,12 @@ export class TokenService {
 
   async issueTokens(user: UserTokenInfo): Promise<TokenPair> {
     const accessToken = await this.signToken(
-      { sub: user.id, email: user.email, tokenType: 'access' },
+      {
+        sub: user.id,
+        email: user.email,
+        role: user.role ?? undefined,
+        tokenType: 'access',
+      },
       { expiresIn: '15m' },
     );
     const refreshToken = await this.signToken(

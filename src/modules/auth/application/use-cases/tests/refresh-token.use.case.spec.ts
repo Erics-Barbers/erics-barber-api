@@ -39,6 +39,7 @@ describe('RefreshTokenUseCase', () => {
     authService.findUserById.mockResolvedValue({
       id: 'userId',
       email: 'test@example.com',
+      role: 'CUSTOMER',
     });
     tokenService.signToken.mockResolvedValue('new-access-token');
 
@@ -52,7 +53,12 @@ describe('RefreshTokenUseCase', () => {
       'hashed-refresh-token',
     );
     expect(tokenService.signToken).toHaveBeenCalledWith(
-      { sub: 'userId', email: 'test@example.com', tokenType: 'access' },
+      {
+        sub: 'userId',
+        email: 'test@example.com',
+        role: 'CUSTOMER',
+        tokenType: 'access',
+      },
       { expiresIn: '15m' },
     );
   });
