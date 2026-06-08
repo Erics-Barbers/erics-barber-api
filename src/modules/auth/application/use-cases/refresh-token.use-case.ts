@@ -3,8 +3,6 @@ import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository'
 import { RefreshTokenRequestDto } from '../../presentation/dto/refresh-token.dto';
 import { TokenService } from '../../infrastructure/services/jwt.service';
 import { BcryptService } from '../../infrastructure/services/bcrypt.service';
-import { AuthResponseDto } from '../../presentation/dto/auth-response.dto';
-import { SessionCreateInput } from 'src/generated/prisma/models/Session';
 
 @Injectable()
 export class RefreshTokenUseCase {
@@ -17,10 +15,13 @@ export class RefreshTokenUseCase {
   async execute(
     dto: RefreshTokenRequestDto,
     refreshToken: string,
-  ): Promise<AuthResponseDto> {
+  ): Promise<{ accessToken: string }> {
     await this.checkTokenIsValid(dto, refreshToken);
-    const tokens = await this.rotateRefreshToken(dto, refreshToken);
-    return tokens;
+    const accessToken = await this.tokenService.signToken(
+      { sub: dto.userId, email: dto.email, tokenType: 'access' },
+      { expiresIn: '15m' },
+    );
+    return { accessToken };
   }
 
   async checkTokenIsValid(dto: RefreshTokenRequestDto, refreshToken: string) {
@@ -43,23 +44,5 @@ export class RefreshTokenUseCase {
 
       throw new UnauthorizedException('Refresh token is invalid');
     }
-  }
-
-  async rotateRefreshToken(dto: RefreshTokenRequestDto, refreshToken: string) {
-    const hashedToken = await this.bcryptService.hashInput(refreshToken);
-    const user = { id: dto.userId, email: dto.email };
-    await this.authService.invalidateRefreshToken(dto.userId, hashedToken);
-    const tokens = await this.tokenService.issueTokens(user);
-    const decoded: any = this.tokenService.decodeToken(tokens.refreshToken);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const expiresAt = new Date(decoded.exp * 1000);
-    const sessionData: SessionCreateInput = {
-      user: { connect: { id: user.id } },
-      refreshToken: hashedToken,
-      expiresAt,
-    };
-    await this.authService.createSession(sessionData);
-
-    return tokens;
   }
 }

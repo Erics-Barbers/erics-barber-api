@@ -214,25 +214,19 @@ export class AuthController {
 
   @HttpCode(200)
   @ApiOkResponse({
-    description: 'Refresh tokens created successfully',
+    description: 'Access token refreshed successfully',
     type: RefreshTokenResponseDto,
   })
   @Post('refresh')
   async refreshTokens(
     @Req() req: Request,
     @Body() dto: RefreshTokenRequestDto,
-    @Res({ passthrough: true }) res: Response,
   ): Promise<RefreshTokenResponseDto> {
     const oldRefreshToken = req.cookies['refreshToken'] as string;
-    const { accessToken, refreshToken } =
-      await this.refreshTokenUseCase.execute(dto, oldRefreshToken);
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      path: '/auth',
-      secure: true,
-      sameSite: 'none',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    const { accessToken } = await this.refreshTokenUseCase.execute(
+      dto,
+      oldRefreshToken,
+    );
 
     return { accessToken, message: 'Access token refreshed successfully' };
   }
