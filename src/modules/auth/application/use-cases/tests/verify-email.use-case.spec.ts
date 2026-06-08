@@ -4,17 +4,27 @@ describe('VerifyEmailUseCase', () => {
   let verifyEmailUseCase: VerifyEmailUseCase;
   let authService: any;
   let tokenService: any;
+  let bcryptService: any;
 
   beforeEach(() => {
     authService = {
       findUserByEmail: jest.fn(),
       markEmailAsVerified: jest.fn(),
+      createSession: jest.fn(),
     };
     tokenService = {
       verifyToken: jest.fn(),
       issueTokens: jest.fn(),
+      decodeToken: jest.fn(),
     };
-    verifyEmailUseCase = new VerifyEmailUseCase(authService, tokenService);
+    bcryptService = {
+      hashInput: jest.fn(),
+    };
+    verifyEmailUseCase = new VerifyEmailUseCase(
+      authService,
+      tokenService,
+      bcryptService,
+    );
   });
 
   it('should verify email successfully and return tokens', async () => {
@@ -31,10 +41,23 @@ describe('VerifyEmailUseCase', () => {
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
     });
-    const result = await verifyEmailUseCase.execute('valid-token');
+    tokenService.decodeToken.mockReturnValue({
+      exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+    });
+    bcryptService.hashInput.mockResolvedValue('hashed-refresh-token');
+    const result = await verifyEmailUseCase.execute(
+      'valid-token',
+      'test-agent',
+    );
     expect(result).toEqual({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
     });
+    expect(authService.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        refreshToken: 'hashed-refresh-token',
+        userAgent: 'test-agent',
+      }),
+    );
   });
 });

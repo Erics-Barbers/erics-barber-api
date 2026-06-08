@@ -37,10 +37,7 @@ import {
 } from '../dto/verify-email.dto';
 import { SendVerificationDto } from '../dto/send-verification.dto';
 import { ResetPasswordEmailDto } from '../dto/reset-password-email.dto';
-import {
-  RefreshTokenRequestDto,
-  RefreshTokenResponseDto,
-} from '../dto/refresh-token.dto';
+import { RefreshTokenResponseDto } from '../dto/refresh-token.dto';
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case';
 import { UserAgent } from 'src/common/decorators/user-agent.decorator';
 import { Request, Response } from 'express';
@@ -218,15 +215,10 @@ export class AuthController {
     type: RefreshTokenResponseDto,
   })
   @Post('refresh')
-  async refreshTokens(
-    @Req() req: Request,
-    @Body() dto: RefreshTokenRequestDto,
-  ): Promise<RefreshTokenResponseDto> {
+  async refreshTokens(@Req() req: Request): Promise<RefreshTokenResponseDto> {
     const oldRefreshToken = req.cookies['refreshToken'] as string;
-    const { accessToken } = await this.refreshTokenUseCase.execute(
-      dto,
-      oldRefreshToken,
-    );
+    const { accessToken } =
+      await this.refreshTokenUseCase.execute(oldRefreshToken);
 
     return { accessToken, message: 'Access token refreshed successfully' };
   }

@@ -1,24 +1,28 @@
-import { LogOutDto } from 'src/modules/auth/presentation/dto/logout.dto';
 import { LogoutUseCase } from '../logout.use-case';
 
 describe('LogoutUseCase', () => {
   let logoutUseCase: LogoutUseCase;
   let authService: any;
+  let tokenService: any;
 
   beforeEach(() => {
     authService = {
       invalidateRefreshToken: jest.fn(),
     };
-    logoutUseCase = new LogoutUseCase(authService);
+    tokenService = {
+      decodeToken: jest.fn(),
+    };
+    logoutUseCase = new LogoutUseCase(authService, tokenService);
   });
 
   it('should logout a user successfully', async () => {
-    const dto: LogOutDto = {
-      refreshToken: 'refresh-token',
-      userId: 'userId',
-    };
+    const refreshToken = 'refresh-token';
+    tokenService.decodeToken.mockReturnValue({
+      sub: 'userId',
+      tokenType: 'refresh',
+    });
     authService.invalidateRefreshToken.mockResolvedValue(undefined);
-    await logoutUseCase.execute(dto);
+    await logoutUseCase.execute(refreshToken);
     expect(authService.invalidateRefreshToken).toHaveBeenCalledWith(
       'userId',
       'refresh-token',

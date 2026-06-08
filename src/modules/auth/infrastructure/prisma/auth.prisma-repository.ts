@@ -51,6 +51,10 @@ export class AuthService {
     return await this.prismaService.user.findUnique({ where: { email } });
   }
 
+  async findUserById(userId: string): Promise<User | null> {
+    return await this.prismaService.user.findUnique({ where: { id: userId } });
+  }
+
   async createUser(data: Prisma.UserCreateInput): Promise<User> {
     return await this.prismaService.user.create({ data });
   }
@@ -82,16 +86,39 @@ export class AuthService {
     });
   }
 
+  async findSessionsByUserId(userId: string): Promise<Session[]> {
+    return await this.prismaService.session.findMany({
+      where: {
+        userId,
+        expiresAt: { gt: new Date() },
+      },
+    });
+  }
+
   async invalidateRefreshToken(
     userId: string,
     refreshToken: string,
   ): Promise<void> {
-    const hashedToken = await this.bcryptService.hashInput(refreshToken);
-    await this.prismaService.session.deleteMany({
-      where: {
-        userId,
-        refreshToken: hashedToken,
-      },
+    const sessions = await this.findSessionsByUserId(userId);
+    const matchingSession = await Promise.any(
+      sessions.map(async (session) => {
+        const isTokenValid = await this.bcryptService.compareHashedInput(
+          refreshToken,
+          session.refreshToken,
+        );
+
+        if (!isTokenValid) {
+          throw new Error('Session does not match refresh token');
+        }
+
+        return session;
+      }),
+    ).catch(() => null);
+
+    if (!matchingSession) return;
+
+    await this.prismaService.session.delete({
+      where: { id: matchingSession.id },
     });
   }
 
