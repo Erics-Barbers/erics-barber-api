@@ -117,6 +117,7 @@ describe('AuthController', () => {
         expect(response).toEqual({
           message: 'Email verified successfully',
           accessToken: 'access-token',
+          refreshToken: 'refresh-token',
         });
       });
   });

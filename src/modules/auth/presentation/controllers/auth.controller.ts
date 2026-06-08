@@ -106,7 +106,11 @@ export class AuthController {
       sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    return { message: 'Email verified successfully', accessToken };
+    return {
+      message: 'Email verified successfully',
+      accessToken,
+      refreshToken,
+    };
   }
 
   @HttpCode(200)
