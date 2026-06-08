@@ -8,12 +8,14 @@ export interface AccessTokenPayload {
   iat: number;
   exp: number;
   role?: string;
+  tokenType: string;
 }
 
 export interface RefreshTokenPayload {
   sub?: string;
   iat: number;
   exp: number;
+  tokenType: string;
 }
 
 export interface TokenPair {
@@ -36,8 +38,10 @@ export class TokenService {
     this.jwtService = new JwtService({ secret: this.secret });
   }
 
-  async signToken<T extends object>(
-    payload: T,
+  async signToken(
+    payload:
+      | Omit<AccessTokenPayload, 'iat' | 'exp'>
+      | Omit<RefreshTokenPayload, 'iat' | 'exp'>,
     options?: { expiresIn?: string },
   ): Promise<string> {
     const iat = Math.floor(Date.now() / 1000);
@@ -47,23 +51,24 @@ export class TokenService {
   }
 
   async generateTokens(email: string): Promise<TokenPair> {
-    const accessToken = await this.signToken<Pick<AccessTokenPayload, 'email'>>(
-      { email },
+    const accessToken = await this.signToken(
+      { email, tokenType: 'access' },
       { expiresIn: '15m' },
     );
-    const refreshToken = await this.signToken<
-      Pick<AccessTokenPayload, 'email'>
-    >({ email }, { expiresIn: '7d' });
+    const refreshToken = await this.signToken(
+      { email, tokenType: 'refresh' },
+      { expiresIn: '7d' },
+    );
     return { accessToken, refreshToken };
   }
 
   async issueTokens(user: UserTokenInfo): Promise<TokenPair> {
     const accessToken = await this.signToken(
-      { sub: user.id, email: user.email },
+      { sub: user.id, email: user.email, tokenType: 'access' },
       { expiresIn: '15m' },
     );
     const refreshToken = await this.signToken(
-      { sub: user.id },
+      { sub: user.id, tokenType: 'refresh' },
       { expiresIn: '7d' },
     );
     return { accessToken, refreshToken };

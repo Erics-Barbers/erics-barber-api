@@ -25,7 +25,7 @@ export class RefreshTokenUseCase {
 
   async checkTokenIsValid(dto: RefreshTokenRequestDto, refreshToken: string) {
     const hashedToken = await this.bcryptService.hashInput(refreshToken);
-    const session = await this.authService.findSession(dto.userId, hashedToken);
+    const session = await this.authService.findSession(hashedToken);
     if (!session) {
       throw new UnauthorizedException(
         'Session not found or refresh token invalid',

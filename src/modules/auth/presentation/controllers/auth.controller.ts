@@ -25,7 +25,6 @@ import { VerifyEmailUseCase } from '../../application/use-cases/verify-email.use
 import { SendVerificationEmailUseCase } from '../../application/use-cases/send-verification-email.use-case';
 
 import { LoginRequestDto, LoginResponseDto } from '../dto/login.dto';
-import { LogOutDto } from '../dto/logout.dto';
 import { MfaDto } from '../dto/mfa.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
@@ -105,7 +104,7 @@ export class AuthController {
     );
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      path: '/auth/refresh',
+      path: '/auth',
       secure: true,
       sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -130,12 +129,16 @@ export class AuthController {
     );
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      path: '/auth/refresh',
+      path: '/auth',
       secure: true,
       sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    return { accessToken, message: 'User logged in successfully' };
+    return {
+      accessToken,
+      refreshToken,
+      message: 'User logged in successfully',
+    };
   }
 
   @HttpCode(200)
@@ -166,14 +169,12 @@ export class AuthController {
     description: 'User logged out successfully',
   })
   @Post('logout')
-  async logout(
-    @Body() dto: LogOutDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    await this.logoutUseCase.execute(dto);
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const refreshToken = req.cookies['refreshToken'] as string;
+    await this.logoutUseCase.execute(refreshToken);
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      path: '/auth/refresh',
+      path: '/auth',
       secure: true,
       sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -227,7 +228,7 @@ export class AuthController {
       await this.refreshTokenUseCase.execute(dto, oldRefreshToken);
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      path: '/auth/refresh',
+      path: '/auth',
       secure: true,
       sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000,

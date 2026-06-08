@@ -28,7 +28,7 @@ export class AuthGuard implements CanActivate {
     }
 
     const payload = await this.tokenService.verifyToken(token);
-    if (!payload || !payload.sub) {
+    if (!payload || !payload.sub || payload.tokenType !== 'access') {
       throw new UnauthorizedException('Invalid or expired token');
     }
     request.user = { ...payload, sub: payload.sub };

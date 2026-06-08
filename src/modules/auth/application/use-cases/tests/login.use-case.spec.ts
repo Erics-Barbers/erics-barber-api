@@ -1,19 +1,25 @@
 import { LoginUseCase } from '../login.use-case';
-import { LoginDto } from '../../../presentation/dto/login.dto';
+import { LoginRequestDto } from '../../../presentation/dto/login.dto';
 
 describe('LoginUseCase', () => {
   let loginUseCase: LoginUseCase;
   let authService: any;
   let tokenService: any;
+  let bcryptService: any;
 
   beforeEach(() => {
     authService = {
       validateUserCredentials: jest.fn(),
+      createSession: jest.fn(),
     };
     tokenService = {
       issueTokens: jest.fn(),
+      decodeToken: jest.fn(),
     };
-    loginUseCase = new LoginUseCase(authService, tokenService);
+    bcryptService = {
+      hashInput: jest.fn(),
+    };
+    loginUseCase = new LoginUseCase(authService, tokenService, bcryptService);
   });
 
   it('should login a user successfully and return tokens', async () => {
@@ -27,16 +33,26 @@ describe('LoginUseCase', () => {
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
     });
-    const dto: LoginDto = {
+    tokenService.decodeToken.mockReturnValue({
+      exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+    });
+    bcryptService.hashInput.mockResolvedValue('hashed-refresh-token');
+    const dto: LoginRequestDto = {
       email: 'test@example.com',
       password: 'Password1',
     };
-    const result = await loginUseCase.execute(dto);
+    const result = await loginUseCase.execute(dto, 'test-agent');
     expect(authService.validateUserCredentials).toHaveBeenCalledWith(
       'test@example.com',
       'Password1',
     );
     expect(tokenService.issueTokens).toHaveBeenCalledWith(mockUser);
+    expect(authService.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        refreshToken: 'hashed-refresh-token',
+        userAgent: 'test-agent',
+      }),
+    );
     expect(result).toEqual({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
@@ -50,11 +66,11 @@ describe('LoginUseCase', () => {
       isEmailVerified: false,
     };
     authService.validateUserCredentials.mockResolvedValue(mockUser);
-    const dto: LoginDto = {
+    const dto: LoginRequestDto = {
       email: 'test@example.com',
       password: 'Password1',
     };
-    await expect(loginUseCase.execute(dto)).rejects.toThrow(
+    await expect(loginUseCase.execute(dto, 'test-agent')).rejects.toThrow(
       'Email not verified',
     );
   });

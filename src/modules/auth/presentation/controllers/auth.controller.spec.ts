@@ -11,8 +11,10 @@ import { GetProfileUseCase } from '../../application/use-cases/get-profile.use-c
 import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case';
 import { RegisterDto } from '../dto/register.dto';
 import { TokenService } from '../../infrastructure/services/jwt.service';
-import { LoginDto } from '../dto/login.dto';
+import { LoginRequestDto } from '../dto/login.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { SendVerificationEmailUseCase } from '../../application/use-cases/send-verification-email.use-case';
+import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -26,6 +28,12 @@ describe('AuthController', () => {
   let mockEnableMFAUseCase = { execute: jest.fn() };
   let mockGetProfileUseCase = { execute: jest.fn() };
   let mockUpdateProfileUseCase = { execute: jest.fn() };
+  let mockSendVerificationEmailUseCase = { execute: jest.fn() };
+  let mockRefreshTokenUseCase = { execute: jest.fn() };
+  let mockResponse = {
+    cookie: jest.fn(),
+    clearCookie: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -44,10 +52,16 @@ describe('AuthController', () => {
         { provide: EnableMfaUseCase, useValue: mockEnableMFAUseCase },
         { provide: GetProfileUseCase, useValue: mockGetProfileUseCase },
         { provide: UpdateProfileUseCase, useValue: mockUpdateProfileUseCase },
+        {
+          provide: SendVerificationEmailUseCase,
+          useValue: mockSendVerificationEmailUseCase,
+        },
+        { provide: RefreshTokenUseCase, useValue: mockRefreshTokenUseCase },
       ],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
+    jest.clearAllMocks();
   });
 
   it('auth/register should return a message and 200 status code', () => {
@@ -83,29 +97,58 @@ describe('AuthController', () => {
 
   it('auth/verify-email should return a message, token and 200 status code', async () => {
     const token = 'verification-token';
-
-    return controller.verifyEmail(token).then((response) => {
-      expect(mockVerifyEmailUseCase.execute).toHaveBeenCalledWith(token);
-      expect(response).toEqual({
-        message: 'Email verified successfully',
-        tokens: undefined,
-      });
+    mockVerifyEmailUseCase.execute.mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
     });
+
+    return controller
+      .verifyEmail('test-agent', mockResponse as any, { token })
+      .then((response) => {
+        expect(mockVerifyEmailUseCase.execute).toHaveBeenCalledWith(
+          token,
+          'test-agent',
+        );
+        expect(mockResponse.cookie).toHaveBeenCalledWith(
+          'refreshToken',
+          'refresh-token',
+          expect.any(Object),
+        );
+        expect(response).toEqual({
+          message: 'Email verified successfully',
+          accessToken: 'access-token',
+        });
+      });
   });
 
   it('auth/login should return a message, result and 200 status code', async () => {
-    const dto: LoginDto = {
+    const dto: LoginRequestDto = {
       email: 'controller-test@example.com',
       password: 'Password123',
     };
-
-    return controller.login(dto).then((response) => {
-      expect(mockLoginUseCase.execute).toHaveBeenCalledWith(dto);
-      expect(response).toEqual({
-        result: undefined,
-        message: 'User logged in successfully',
-      });
+    mockLoginUseCase.execute.mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
     });
+
+    return controller
+      .login('test-agent', mockResponse as any, dto)
+      .then((response) => {
+        expect(mockLoginUseCase.execute).toHaveBeenCalledWith(
+          dto,
+          'test-agent',
+        );
+        expect(mockResponse.cookie).toHaveBeenCalledWith(
+          'refreshToken',
+          'refresh-token',
+          expect.any(Object),
+        );
+        expect(response).toEqual({
+          accessToken: 'access-token',
+          refreshToken: 'refresh-token',
+          message: 'User logged in successfully',
+        });
+      });
   });
 
   it('auth/reset-password should return 200 and success message for valid request', () => {
