@@ -219,11 +219,26 @@ export class AuthController {
     type: RefreshTokenResponseDto,
   })
   @Post('refresh')
-  async refreshTokens(@Req() req: Request): Promise<RefreshTokenResponseDto> {
+  async refreshTokens(
+    @UserAgent() userAgent: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<RefreshTokenResponseDto> {
     const oldRefreshToken = req.cookies['refreshToken'] as string;
-    const { accessToken } =
-      await this.refreshTokenUseCase.execute(oldRefreshToken);
+    const { accessToken, refreshToken } =
+      await this.refreshTokenUseCase.execute(oldRefreshToken, userAgent);
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      path: '/auth',
+      secure: true,
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
-    return { accessToken, message: 'Access token refreshed successfully' };
+    return {
+      accessToken,
+      refreshToken,
+      message: 'Access token refreshed successfully',
+    };
   }
 }

@@ -5,6 +5,7 @@ import {
   TokenService,
 } from '../../infrastructure/services/jwt.service';
 import { BcryptService } from '../../infrastructure/services/bcrypt.service';
+import { SessionCreateInput } from 'src/generated/prisma/models/Session';
 
 @Injectable()
 export class RefreshTokenUseCase {
@@ -14,7 +15,10 @@ export class RefreshTokenUseCase {
     private readonly bcryptService: BcryptService,
   ) {}
 
-  async execute(refreshToken: string): Promise<{ accessToken: string }> {
+  async execute(
+    refreshToken: string,
+    userAgent?: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     const decoded = await this.checkTokenIsValid(refreshToken);
     const user = await this.authService.findUserById(decoded.sub);
 
@@ -22,17 +26,29 @@ export class RefreshTokenUseCase {
       throw new UnauthorizedException('User not found');
     }
 
-    const accessToken = await this.tokenService.signToken(
-      {
-        sub: user.id,
-        email: user.email,
-        role: user.role ?? undefined,
-        tokenType: 'access',
-      },
-      { expiresIn: '15m' },
-    );
+    await this.authService.invalidateRefreshToken(user.id, refreshToken);
+    const tokens = await this.tokenService.issueTokens(user);
+    const refreshPayload = this.tokenService.decodeToken(
+      tokens.refreshToken,
+    ) as RefreshTokenPayload | null;
 
-    return { accessToken };
+    if (!refreshPayload?.exp) {
+      throw new UnauthorizedException('Invalid rotated refresh token');
+    }
+
+    const hashedRefreshToken = await this.bcryptService.hashInput(
+      tokens.refreshToken,
+    );
+    const sessionData: SessionCreateInput = {
+      user: { connect: { id: user.id } },
+      refreshToken: hashedRefreshToken,
+      expiresAt: new Date(refreshPayload.exp * 1000),
+      userAgent,
+    };
+
+    await this.authService.createSession(sessionData);
+
+    return tokens;
   }
 
   async checkTokenIsValid(

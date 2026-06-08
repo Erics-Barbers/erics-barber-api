@@ -26,6 +26,14 @@ export class RefreshTokenResponseDto {
   readonly accessToken!: string;
 
   @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description:
+      'Rotated refresh token. Intended for trusted server-side clients such as the Next.js BFF to set as an HttpOnly browser cookie.',
+  })
+  @IsString()
+  readonly refreshToken!: string;
+
+  @ApiProperty({
     description: 'Success message',
   })
   @IsString()

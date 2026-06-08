@@ -152,6 +152,36 @@ describe('AuthController', () => {
       });
   });
 
+  it('auth/refresh should rotate refresh token and return new tokens', async () => {
+    mockRefreshTokenUseCase.execute.mockResolvedValue({
+      accessToken: 'new-access-token',
+      refreshToken: 'new-refresh-token',
+    });
+
+    return controller
+      .refreshTokens(
+        'test-agent',
+        { cookies: { refreshToken: 'old-refresh-token' } } as any,
+        mockResponse as any,
+      )
+      .then((response) => {
+        expect(mockRefreshTokenUseCase.execute).toHaveBeenCalledWith(
+          'old-refresh-token',
+          'test-agent',
+        );
+        expect(mockResponse.cookie).toHaveBeenCalledWith(
+          'refreshToken',
+          'new-refresh-token',
+          expect.any(Object),
+        );
+        expect(response).toEqual({
+          accessToken: 'new-access-token',
+          refreshToken: 'new-refresh-token',
+          message: 'Access token refreshed successfully',
+        });
+      });
+  });
+
   it('auth/reset-password should return 200 and success message for valid request', () => {
     const dto: ResetPasswordDto = {
       email: 'controller-test@example.com',
