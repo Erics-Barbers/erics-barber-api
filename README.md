@@ -72,6 +72,9 @@ prisma/
 - View the API endpoints: [https://erics-barber-api.onrender.com/api](https://erics-barber-api.onrender.com/api)
 - OpenAPI/Swagger documentation is available at `/api` when running locally.
 
+## Authentication Notes
+- See [docs/authentication.md](docs/authentication.md) for the current auth architecture, token types, refresh rotation, logout behavior, rate limits, and MFA status.
+
 ## Contributing
 Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
 
