@@ -15,10 +15,10 @@ describe('RegisterUseCase', () => {
       sendVerificationEmail: jest.fn(),
     };
     bcryptService = {
-      hashPassword: jest.fn(),
+      hashInput: jest.fn(),
     };
     tokenService = {
-      generateTokens: jest.fn(),
+      issueEmailVerificationToken: jest.fn(),
     };
     registerUseCase = new RegisterUseCase(
       authService,
@@ -29,8 +29,8 @@ describe('RegisterUseCase', () => {
 
   it('should register a user successfully and call all related services', async () => {
     authService.findUserByEmail.mockResolvedValue(null);
-    bcryptService.hashPassword.mockResolvedValue('hashedPassword');
-    tokenService.generateTokens.mockResolvedValue({ accessToken: 'token' });
+    bcryptService.hashInput.mockResolvedValue('hashedPassword');
+    tokenService.issueEmailVerificationToken.mockResolvedValue('token');
     authService.createUser.mockResolvedValue(undefined);
     authService.sendVerificationEmail.mockResolvedValue(undefined);
 
@@ -42,12 +42,12 @@ describe('RegisterUseCase', () => {
     expect(authService.findUserByEmail).toHaveBeenCalledWith(
       'test@example.com',
     );
-    expect(bcryptService.hashPassword).toHaveBeenCalledWith('Password1');
+    expect(bcryptService.hashInput).toHaveBeenCalledWith('Password1');
     expect(authService.createUser).toHaveBeenCalledWith({
       email: 'test@example.com',
       passwordHash: 'hashedPassword',
     });
-    expect(tokenService.generateTokens).toHaveBeenCalledWith(
+    expect(tokenService.issueEmailVerificationToken).toHaveBeenCalledWith(
       'test@example.com',
     );
     expect(authService.sendVerificationEmail).toHaveBeenCalledWith(

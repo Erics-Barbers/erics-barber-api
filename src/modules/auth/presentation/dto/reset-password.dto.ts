@@ -1,13 +1,13 @@
-import { IsEmail, IsString, Length, Matches } from 'class-validator';
+import { IsString, Length, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ResetPasswordDto {
   @ApiProperty({
-    example: 'user@example.com',
-    description: 'User email address',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'Password reset token sent to the user email',
   })
-  @IsEmail({}, { message: 'Email must be a valid email address' })
-  readonly email!: string;
+  @IsString()
+  readonly token!: string;
 
   @ApiProperty({
     example: 'NewPassword123',

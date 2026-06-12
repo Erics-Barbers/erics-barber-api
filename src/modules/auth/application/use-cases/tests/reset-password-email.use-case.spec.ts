@@ -11,7 +11,7 @@ describe('ResetPasswordEmailUseCase', () => {
       sendResetPasswordEmail: jest.fn(),
     };
     tokenService = {
-      generateTokens: jest.fn(),
+      issuePasswordResetToken: jest.fn(),
     };
     resetPasswordEmailUseCase = new ResetPasswordEmailUseCase(
       authService,
@@ -25,16 +25,17 @@ describe('ResetPasswordEmailUseCase', () => {
       email: 'test@example.com',
     };
     authService.findUserByEmail.mockResolvedValue(mockUser);
-    tokenService.generateTokens.mockResolvedValue({
-      accessToken: 'access-token',
-      refreshToken: 'refresh-token',
-    });
+    tokenService.issuePasswordResetToken.mockResolvedValue(
+      'password-reset-token',
+    );
     await resetPasswordEmailUseCase.execute(mockUser.email);
     expect(authService.findUserByEmail).toHaveBeenCalledWith(mockUser.email);
-    expect(tokenService.generateTokens).toHaveBeenCalledWith(mockUser.email);
+    expect(tokenService.issuePasswordResetToken).toHaveBeenCalledWith(
+      mockUser.email,
+    );
     expect(authService.sendResetPasswordEmail).toHaveBeenCalledWith(
       mockUser.email,
-      'access-token',
+      'password-reset-token',
     );
   });
 
@@ -44,7 +45,7 @@ describe('ResetPasswordEmailUseCase', () => {
     expect(authService.findUserByEmail).toHaveBeenCalledWith(
       'test@example.com',
     );
-    expect(tokenService.generateTokens).not.toHaveBeenCalled();
+    expect(tokenService.issuePasswordResetToken).not.toHaveBeenCalled();
     expect(authService.sendResetPasswordEmail).not.toHaveBeenCalled();
   });
 });

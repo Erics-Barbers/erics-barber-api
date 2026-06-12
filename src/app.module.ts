@@ -8,8 +8,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { BarbersModule } from './modules/barbers/barbers.module';
 import { HealthModule } from './modules/health/health.module';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { RequestLoggingMiddleware } from './common/middleware/request-logging.middleware';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -30,7 +31,13 @@ import { RequestLoggingMiddleware } from './common/middleware/request-logging.mi
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

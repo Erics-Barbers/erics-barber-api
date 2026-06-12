@@ -2,20 +2,40 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
 // Token payloads and result types
+export type AuthTokenType =
+  | 'access'
+  | 'refresh'
+  | 'emailVerification'
+  | 'passwordReset';
+
 export interface AccessTokenPayload {
   sub?: string;
   email: string;
   iat: number;
   exp: number;
   role?: string;
-  tokenType: string;
+  tokenType: 'access';
 }
 
 export interface RefreshTokenPayload {
   sub?: string;
   iat: number;
   exp: number;
-  tokenType: string;
+  tokenType: 'refresh';
+}
+
+export interface EmailVerificationTokenPayload {
+  email: string;
+  iat: number;
+  exp: number;
+  tokenType: 'emailVerification';
+}
+
+export interface PasswordResetTokenPayload {
+  email: string;
+  iat: number;
+  exp: number;
+  tokenType: 'passwordReset';
 }
 
 export interface TokenPair {
@@ -29,6 +49,18 @@ export interface UserTokenInfo {
   role?: string | null;
 }
 
+export type AuthTokenPayload =
+  | AccessTokenPayload
+  | RefreshTokenPayload
+  | EmailVerificationTokenPayload
+  | PasswordResetTokenPayload;
+
+type AuthTokenInput =
+  | Omit<AccessTokenPayload, 'iat' | 'exp'>
+  | Omit<RefreshTokenPayload, 'iat' | 'exp'>
+  | Omit<EmailVerificationTokenPayload, 'iat' | 'exp'>
+  | Omit<PasswordResetTokenPayload, 'iat' | 'exp'>;
+
 @Injectable()
 export class TokenService {
   private readonly secret = process.env.JWT_SECRET!;
@@ -40,9 +72,7 @@ export class TokenService {
   }
 
   async signToken(
-    payload:
-      | Omit<AccessTokenPayload, 'iat' | 'exp'>
-      | Omit<RefreshTokenPayload, 'iat' | 'exp'>,
+    payload: AuthTokenInput,
     options?: { expiresIn?: string },
   ): Promise<string> {
     const iat = Math.floor(Date.now() / 1000);
@@ -51,16 +81,18 @@ export class TokenService {
     return await this.jwtService.signAsync({ ...payload, iat, exp });
   }
 
-  async generateTokens(email: string): Promise<TokenPair> {
-    const accessToken = await this.signToken(
-      { email, tokenType: 'access' },
-      { expiresIn: '15m' },
+  async issueEmailVerificationToken(email: string): Promise<string> {
+    return await this.signToken(
+      { email, tokenType: 'emailVerification' },
+      { expiresIn: '24h' },
     );
-    const refreshToken = await this.signToken(
-      { email, tokenType: 'refresh' },
-      { expiresIn: '7d' },
+  }
+
+  async issuePasswordResetToken(email: string): Promise<string> {
+    return await this.signToken(
+      { email, tokenType: 'passwordReset' },
+      { expiresIn: '30m' },
     );
-    return { accessToken, refreshToken };
   }
 
   async issueTokens(user: UserTokenInfo): Promise<TokenPair> {
@@ -80,24 +112,19 @@ export class TokenService {
     return { accessToken, refreshToken };
   }
 
-  async verifyToken(
-    token: string,
-  ): Promise<AccessTokenPayload | RefreshTokenPayload | null> {
+  async verifyToken(token: string): Promise<AuthTokenPayload | null> {
     try {
-      const decoded = await this.jwtService.verifyAsync<
-        AccessTokenPayload | RefreshTokenPayload
-      >(token);
+      const decoded =
+        await this.jwtService.verifyAsync<AuthTokenPayload>(token);
       return decoded;
     } catch {
       return null;
     }
   }
 
-  decodeToken(token: string): AccessTokenPayload | RefreshTokenPayload | null {
+  decodeToken(token: string): AuthTokenPayload | null {
     try {
-      const decoded = this.jwtService.decode<
-        AccessTokenPayload | RefreshTokenPayload
-      >(token);
+      const decoded = this.jwtService.decode<AuthTokenPayload>(token);
       if (decoded && typeof decoded === 'object') {
         return decoded;
       }

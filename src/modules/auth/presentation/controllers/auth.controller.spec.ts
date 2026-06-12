@@ -184,7 +184,7 @@ describe('AuthController', () => {
 
   it('auth/reset-password should return 200 and success message for valid request', () => {
     const dto: ResetPasswordDto = {
-      email: 'controller-test@example.com',
+      token: 'password-reset-token',
       newPassword: 'NewPassword123',
     };
 
@@ -194,18 +194,15 @@ describe('AuthController', () => {
     });
   });
 
-  it('auth/reset-password should return 400 error code for a non-valid email', async () => {
+  it('auth/reset-password should propagate reset token errors', async () => {
     const dto: ResetPasswordDto = {
-      email: 'invalid-email-format',
+      token: 'invalid-token',
       newPassword: 'NewPassword123',
     };
+    const error = new Error('Invalid or expired password reset token');
+    mockResetPasswordUseCase.execute.mockRejectedValue(error);
 
-    try {
-      return await controller.resetPassword(dto);
-    } catch (error) {
-      expect(error.status).toBe(400);
-      expect(error.message).toBe('Email must be a valid email address');
-      expect(mockResetPasswordUseCase.execute).not.toHaveBeenCalledWith(dto);
-    }
+    await expect(controller.resetPassword(dto)).rejects.toThrow(error);
+    expect(mockResetPasswordUseCase.execute).toHaveBeenCalledWith(dto);
   });
 });

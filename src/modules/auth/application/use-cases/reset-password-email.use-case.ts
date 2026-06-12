@@ -12,8 +12,8 @@ export class ResetPasswordEmailUseCase {
   async execute(email: string): Promise<void> {
     const user = await this.authService.findUserByEmail(email);
     if (user) {
-      const token = await this.tokenService.generateTokens(email);
-      await this.authService.sendResetPasswordEmail(email, token.accessToken);
+      const token = await this.tokenService.issuePasswordResetToken(email);
+      await this.authService.sendResetPasswordEmail(email, token);
     }
   }
 }

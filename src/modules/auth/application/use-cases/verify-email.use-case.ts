@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import {
-  AccessTokenPayload,
+  EmailVerificationTokenPayload,
   RefreshTokenPayload,
   TokenService,
 } from '../../infrastructure/services/jwt.service';
@@ -24,12 +24,16 @@ export class VerifyEmailUseCase {
     return await this.issueTokens(user, userAgent);
   }
 
-  async verifyToken(token: string): Promise<AccessTokenPayload> {
+  async verifyToken(token: string): Promise<EmailVerificationTokenPayload> {
     const payload = (await this.tokenService.verifyToken(
       token,
-    )) as AccessTokenPayload;
-    if (!payload || !payload.email) {
-      throw new Error('Invalid or expired token');
+    )) as EmailVerificationTokenPayload | null;
+    if (
+      !payload ||
+      !payload.email ||
+      payload.tokenType !== 'emailVerification'
+    ) {
+      throw new UnauthorizedException('Invalid or expired verification token');
     }
     return payload;
   }

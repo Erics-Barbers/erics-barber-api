@@ -19,7 +19,7 @@ export class SendVerificationEmailUseCase {
   }
 
   async sendVerificationEmail(email: string): Promise<void> {
-    const tokens = await this.tokenService.generateTokens(email);
-    await this.authService.sendVerificationEmail(email, tokens.accessToken);
+    const token = await this.tokenService.issueEmailVerificationToken(email);
+    await this.authService.sendVerificationEmail(email, token);
   }
 }
