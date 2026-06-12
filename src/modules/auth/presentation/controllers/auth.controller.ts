@@ -14,6 +14,7 @@ import {
   ApiOkResponse,
   ApiCreatedResponse,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { EnableMfaUseCase } from '../../application/use-cases/enable-mfa.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
@@ -44,6 +45,9 @@ import { Request, Response } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { UserProfile } from 'src/common/types/profile';
 
+const ONE_MINUTE = 60_000;
+const ONE_HOUR = 60 * 60_000;
+
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -64,6 +68,7 @@ export class AuthController {
   @ApiCreatedResponse({
     description: 'User registered successfully',
   })
+  @Throttle({ default: { limit: 5, ttl: ONE_MINUTE } })
   @Post('register')
   async register(@Body() dto: RegisterDto) {
     await this.registerUseCase.execute(dto);
@@ -78,6 +83,7 @@ export class AuthController {
     status: 200,
     description: 'Verification email sent successfully',
   })
+  @Throttle({ default: { limit: 3, ttl: ONE_HOUR } })
   @Post('send-verification-email')
   async sendVerificationEmail(@Body() dto: SendVerificationDto) {
     await this.sendVerificationEmailUseCase.execute(dto.email);
@@ -89,6 +95,7 @@ export class AuthController {
     description: 'Email verified successfully',
     type: VerifyEmailResponseDto,
   })
+  @Throttle({ default: { limit: 10, ttl: ONE_MINUTE } })
   @Post('verify-email')
   async verifyEmail(
     @UserAgent() userAgent: string,
@@ -118,6 +125,7 @@ export class AuthController {
     description: 'User logged in successfully',
     type: LoginResponseDto,
   })
+  @Throttle({ default: { limit: 10, ttl: ONE_MINUTE } })
   @Post('login')
   async login(
     @UserAgent() userAgent: string,
@@ -169,6 +177,7 @@ export class AuthController {
   @ApiOkResponse({
     description: 'User logged out successfully',
   })
+  @Throttle({ default: { limit: 30, ttl: ONE_MINUTE } })
   @Post('logout')
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies['refreshToken'] as string;
@@ -187,6 +196,7 @@ export class AuthController {
   @ApiOkResponse({
     description: 'Password reset link sent to email if it exists',
   })
+  @Throttle({ default: { limit: 3, ttl: ONE_HOUR } })
   @Post('reset-password-email')
   async resetPasswordEmail(@Body() dto: ResetPasswordEmailDto) {
     await this.resetPasswordEmailUseCase.execute(dto.email);
@@ -197,6 +207,7 @@ export class AuthController {
   @ApiOkResponse({
     description: 'Password reset successfully',
   })
+  @Throttle({ default: { limit: 10, ttl: ONE_MINUTE } })
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     await this.resetPasswordUseCase.execute(dto);
@@ -207,6 +218,7 @@ export class AuthController {
   @ApiOkResponse({
     description: 'MFA enabled successfully',
   })
+  @Throttle({ default: { limit: 10, ttl: ONE_MINUTE } })
   @Post('verify-mfa')
   async verifyMFA(@Body() dto: MfaDto) {
     await this.enableMFAUseCase.execute(dto);
@@ -218,6 +230,7 @@ export class AuthController {
     description: 'Access token refreshed successfully',
     type: RefreshTokenResponseDto,
   })
+  @Throttle({ default: { limit: 30, ttl: ONE_MINUTE } })
   @Post('refresh')
   async refreshTokens(
     @UserAgent() userAgent: string,
