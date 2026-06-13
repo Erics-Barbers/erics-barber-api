@@ -45,14 +45,14 @@ Refresh tokens are rotated. A successful refresh does this:
 
 1. Verify the submitted refresh token.
 2. Confirm it matches an active stored session hash.
-3. Invalidate the old refresh session.
-4. Issue a new access token and refresh token.
-5. Store the new refresh token hash as a new session.
-6. Return both tokens to the BFF.
+3. Issue a new access token and refresh token.
+4. Hash the new refresh token.
+5. In one database transaction, delete the old session and create the new session.
+6. Return both tokens to the BFF only after the transaction commits.
 
 This makes refresh tokens one-use. Reusing an old refresh token should fail.
 
-Future hardening: make the invalidation/create step transactional, and consider session-family replay detection so reuse of an old rotated token can revoke related sessions.
+Future hardening: consider session-family replay detection so reuse of an old rotated token can revoke related sessions.
 
 ## Logout
 
@@ -66,17 +66,17 @@ The UI also clears local auth cookies even if the API logout call fails. This ke
 
 The app has a global `100/min` throttling default, with tighter limits on auth-sensitive endpoints:
 
-| Endpoint | Limit |
-| --- | ---: |
-| `POST /auth/register` | 5/min |
-| `POST /auth/login` | 10/min |
+| Endpoint                             |  Limit |
+| ------------------------------------ | -----: |
+| `POST /auth/register`                |  5/min |
+| `POST /auth/login`                   | 10/min |
 | `POST /auth/send-verification-email` | 3/hour |
-| `POST /auth/verify-email` | 10/min |
-| `POST /auth/reset-password-email` | 3/hour |
-| `POST /auth/reset-password` | 10/min |
-| `POST /auth/verify-mfa` | 10/min |
-| `POST /auth/refresh` | 30/min |
-| `POST /auth/logout` | 30/min |
+| `POST /auth/verify-email`            | 10/min |
+| `POST /auth/reset-password-email`    | 3/hour |
+| `POST /auth/reset-password`          | 10/min |
+| `POST /auth/verify-mfa`              | 10/min |
+| `POST /auth/refresh`                 | 30/min |
+| `POST /auth/logout`                  | 30/min |
 
 Email-sending endpoints are intentionally the tightest because they can create external side effects through the email provider.
 

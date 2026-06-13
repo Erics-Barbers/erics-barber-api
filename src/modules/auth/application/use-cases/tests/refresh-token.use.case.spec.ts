@@ -1,17 +1,32 @@
 import { RefreshTokenUseCase } from '../refresh-token.use-case';
+import { AuthService } from '../../../infrastructure/prisma/auth.prisma-repository';
+import {
+  RefreshTokenPayload,
+  TokenService,
+} from '../../../infrastructure/services/jwt.service';
+import { BcryptService } from '../../../infrastructure/services/bcrypt.service';
+import { Role } from 'src/generated/prisma/client';
 
 describe('RefreshTokenUseCase', () => {
   let refreshTokenUseCase: RefreshTokenUseCase;
-  let authService: any;
-  let tokenService: any;
-  let bcryptService: any;
+  let authService: jest.Mocked<
+    Pick<
+      AuthService,
+      'findSessionsByUserId' | 'findUserById' | 'rotateRefreshTokenSession'
+    >
+  >;
+  let tokenService: jest.Mocked<
+    Pick<TokenService, 'verifyToken' | 'issueTokens' | 'decodeToken'>
+  >;
+  let bcryptService: jest.Mocked<
+    Pick<BcryptService, 'compareHashedInput' | 'hashInput'>
+  >;
 
   beforeEach(() => {
     authService = {
       findSessionsByUserId: jest.fn(),
       findUserById: jest.fn(),
-      invalidateRefreshToken: jest.fn(),
-      createSession: jest.fn(),
+      rotateRefreshTokenSession: jest.fn(),
     };
     tokenService = {
       verifyToken: jest.fn(),
@@ -24,9 +39,9 @@ describe('RefreshTokenUseCase', () => {
     };
 
     refreshTokenUseCase = new RefreshTokenUseCase(
-      authService,
-      tokenService,
-      bcryptService,
+      authService as unknown as AuthService,
+      tokenService as unknown as TokenService,
+      bcryptService as unknown as BcryptService,
     );
   });
 
@@ -35,24 +50,43 @@ describe('RefreshTokenUseCase', () => {
     tokenService.verifyToken.mockResolvedValue({
       sub: 'userId',
       tokenType: 'refresh',
-    });
+      iat: 1,
+      exp: 2,
+    } satisfies RefreshTokenPayload);
     authService.findSessionsByUserId.mockResolvedValue([
-      { refreshToken: 'hashed-refresh-token' },
+      {
+        id: 'old-session-id',
+        userId: 'userId',
+        refreshToken: 'hashed-refresh-token',
+        userAgent: 'test-agent',
+        ipAddress: null,
+        expiresAt: new Date('2026-06-20T00:00:00.000Z'),
+        createdAt: new Date('2026-06-13T00:00:00.000Z'),
+        barberId: null,
+      },
     ]);
     bcryptService.compareHashedInput.mockResolvedValue(true);
     authService.findUserById.mockResolvedValue({
       id: 'userId',
+      name: 'Test Customer',
       email: 'test@example.com',
-      role: 'CUSTOMER',
+      passwordHash: 'hashed-password',
+      role: Role.CUSTOMER,
+      createdAt: new Date('2026-06-13T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-13T00:00:00.000Z'),
+      isEmailVerified: true,
     });
-    authService.invalidateRefreshToken.mockResolvedValue(undefined);
+    authService.rotateRefreshTokenSession.mockResolvedValue(undefined);
     tokenService.issueTokens.mockResolvedValue({
       accessToken: 'new-access-token',
       refreshToken: 'new-refresh-token',
     });
     tokenService.decodeToken.mockReturnValue({
       exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
-    });
+      sub: 'userId',
+      tokenType: 'refresh',
+      iat: 1,
+    } satisfies RefreshTokenPayload);
     bcryptService.hashInput.mockResolvedValue('hashed-new-refresh-token');
 
     await expect(
@@ -67,16 +101,15 @@ describe('RefreshTokenUseCase', () => {
       refreshToken,
       'hashed-refresh-token',
     );
-    expect(authService.invalidateRefreshToken).toHaveBeenCalledWith(
-      'userId',
-      refreshToken,
+    expect(tokenService.issueTokens).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'userId',
+        email: 'test@example.com',
+        role: Role.CUSTOMER,
+      }),
     );
-    expect(tokenService.issueTokens).toHaveBeenCalledWith({
-      id: 'userId',
-      email: 'test@example.com',
-      role: 'CUSTOMER',
-    });
-    expect(authService.createSession).toHaveBeenCalledWith(
+    expect(authService.rotateRefreshTokenSession).toHaveBeenCalledWith(
+      'old-session-id',
       expect.objectContaining({
         refreshToken: 'hashed-new-refresh-token',
         userAgent: 'test-agent',

@@ -92,6 +92,16 @@ export class AuthService {
     await this.prismaService.session.create({ data });
   }
 
+  async rotateRefreshTokenSession(
+    oldSessionId: string,
+    newSessionData: Prisma.SessionCreateInput,
+  ): Promise<void> {
+    await this.prismaService.$transaction(async (tx) => {
+      await tx.session.delete({ where: { id: oldSessionId } });
+      await tx.session.create({ data: newSessionData });
+    });
+  }
+
   async findSession(refreshToken: string): Promise<Session | null> {
     return await this.prismaService.session.findUnique({
       where: { refreshToken },

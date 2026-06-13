@@ -6,6 +6,7 @@ import {
 } from '../../infrastructure/services/jwt.service';
 import { BcryptService } from '../../infrastructure/services/bcrypt.service';
 import { SessionCreateInput } from 'src/generated/prisma/models/Session';
+import { Session } from 'src/generated/prisma/client';
 
 @Injectable()
 export class RefreshTokenUseCase {
@@ -19,14 +20,14 @@ export class RefreshTokenUseCase {
     refreshToken: string,
     userAgent?: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    const decoded = await this.checkTokenIsValid(refreshToken);
+    const { decoded, matchingSession } =
+      await this.checkTokenIsValid(refreshToken);
     const user = await this.authService.findUserById(decoded.sub);
 
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
 
-    await this.authService.invalidateRefreshToken(user.id, refreshToken);
     const tokens = await this.tokenService.issueTokens(user);
     const refreshPayload = this.tokenService.decodeToken(
       tokens.refreshToken,
@@ -46,14 +47,18 @@ export class RefreshTokenUseCase {
       userAgent,
     };
 
-    await this.authService.createSession(sessionData);
+    await this.authService.rotateRefreshTokenSession(
+      matchingSession.id,
+      sessionData,
+    );
 
     return tokens;
   }
 
-  async checkTokenIsValid(
-    refreshToken: string,
-  ): Promise<RefreshTokenPayload & { sub: string }> {
+  async checkTokenIsValid(refreshToken: string): Promise<{
+    decoded: RefreshTokenPayload & { sub: string };
+    matchingSession: Session;
+  }> {
     const decoded = (await this.tokenService.verifyToken(
       refreshToken,
     )) as RefreshTokenPayload | null;
@@ -84,6 +89,9 @@ export class RefreshTokenUseCase {
       );
     }
 
-    return decoded as RefreshTokenPayload & { sub: string };
+    return {
+      decoded: decoded as RefreshTokenPayload & { sub: string },
+      matchingSession,
+    };
   }
 }
