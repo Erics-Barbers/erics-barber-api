@@ -8,6 +8,7 @@ import {
   Req,
   Res,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiResponse,
@@ -44,11 +45,13 @@ import { UserAgent } from 'src/common/decorators/user-agent.decorator';
 import { Request, Response } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { UserProfile } from 'src/common/types/profile';
+import { AuthLoggingInterceptor } from '../interceptors/auth-logging.interceptor';
 
 const ONE_MINUTE = 60_000;
 const ONE_HOUR = 60 * 60_000;
 
 @Controller('auth')
+@UseInterceptors(AuthLoggingInterceptor)
 export class AuthController {
   constructor(
     private readonly registerUseCase: RegisterUseCase,
