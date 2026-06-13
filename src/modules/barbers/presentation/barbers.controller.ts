@@ -1,8 +1,10 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
   HttpCode,
+  Param,
   Post,
   Put,
   UseGuards,
@@ -42,7 +44,7 @@ export class BarbersController {
   @HttpCode(200)
   @Get(':id')
   @Roles(Role.Admin, Role.Customer, Role.Barber)
-  async getBarberDetails(dto: GetBarberDto) {
+  async getBarberDetails(@Param() dto: GetBarberDto) {
     const barber = await this.getBarberUseCase.execute(dto.id);
     return barber;
   }
@@ -50,7 +52,7 @@ export class BarbersController {
   @HttpCode(201)
   @Post('')
   @Roles(Role.Admin)
-  async createBarber(dto: CreateBarberDto) {
+  async createBarber(@Body() dto: CreateBarberDto) {
     const barber = await this.createBarberUseCase.execute(dto);
     return { message: 'Barber created successfully', barber };
   }
@@ -58,15 +60,15 @@ export class BarbersController {
   @HttpCode(200)
   @Put(':id')
   @Roles(Role.Admin)
-  async updateBarber(dto: UpdateBarberDto) {
-    const barber = await this.updateBarberUseCase.execute(dto);
+  async updateBarber(@Param('id') id: string, @Body() dto: UpdateBarberDto) {
+    const barber = await this.updateBarberUseCase.execute(id, dto);
     return { message: 'Barber updated successfully', barber };
   }
 
   @HttpCode(200)
   @Delete(':id')
   @Roles(Role.Admin)
-  async deleteBarber(dto: DeleteBarberDto) {
+  async deleteBarber(@Param() dto: DeleteBarberDto) {
     await this.deleteBarberUseCase.execute(dto.id);
     return { message: 'Barber deleted successfully' };
   }

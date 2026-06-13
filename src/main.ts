@@ -6,6 +6,7 @@ import helmet from 'helmet';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import cookieParser = require('cookie-parser');
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
+import { globalValidationPipeOptions } from './config/validation';
 
 async function bootstrap() {
   // Create the NestJS application
@@ -41,7 +42,7 @@ async function bootstrap() {
 
   app.use(helmet());
   app.enableCors(corsOptions);
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(new ValidationPipe(globalValidationPipeOptions));
   app.use(cookieParser());
 
   // Start the application

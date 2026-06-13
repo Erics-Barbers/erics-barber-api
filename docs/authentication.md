@@ -26,6 +26,19 @@ The BFF stores:
 
 The API also sets an API-domain refresh cookie for compatibility, but the browser-facing cookie that matters to the UI is set by Next.js.
 
+## Request Validation
+
+The API uses a strict global `ValidationPipe` configured in `src/config/validation.ts`.
+
+Important behavior:
+
+- request bodies and query strings are transformed into DTO instances
+- unexpected properties are rejected instead of silently accepted
+- decorated query values, such as pagination numbers, are converted to their expected primitive types
+- validation errors hide the submitted object/value to avoid echoing sensitive input
+
+Every request DTO should decorate every accepted property. With whitelist validation enabled, an undecorated DTO property is treated as not part of the public API contract.
+
 ## Refresh Rotation
 
 Refresh tokens are rotated. A successful refresh does this:
@@ -43,9 +56,11 @@ Future hardening: make the invalidation/create step transactional, and consider 
 
 ## Logout
 
-The UI clears local auth cookies even if the API logout call fails. This keeps the user experience reliable.
+Logout is idempotent from the client perspective. A missing, malformed, wrong-type, expired, or already-revoked refresh token still produces a successful logout response after the API clears its refresh cookie.
 
-Future hardening: make the API logout endpoint idempotent too. A missing, expired, or already-revoked refresh token should still result in a successful logout response after clearing the cookie.
+When a valid refresh token is present, the API invalidates the matching refresh-token session in PostgreSQL.
+
+The UI also clears local auth cookies even if the API logout call fails. This keeps the user experience reliable.
 
 ## Rate Limits
 
@@ -64,6 +79,25 @@ The app has a global `100/min` throttling default, with tighter limits on auth-s
 | `POST /auth/logout` | 30/min |
 
 Email-sending endpoints are intentionally the tightest because they can create external side effects through the email provider.
+
+## Unverified Account Cleanup
+
+Unverified customer accounts are removed by a scheduled backend job.
+
+Default policy:
+
+- run daily at 2am server time
+- delete users where `isEmailVerified = false`
+- only delete `CUSTOMER` users
+- only delete users older than 7 days
+
+The retention window can be changed with:
+
+```text
+UNVERIFIED_USER_TTL_DAYS=7
+```
+
+This keeps abandoned registrations from accumulating while giving users time to find the verification email or request another one.
 
 ## MFA Status
 

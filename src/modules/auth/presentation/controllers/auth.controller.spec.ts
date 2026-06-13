@@ -18,19 +18,19 @@ import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.u
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let tokenService = { verifyToken: jest.fn() };
-  let mockRegisterUseCase = { execute: jest.fn() };
-  let mockVerifyEmailUseCase = { execute: jest.fn() };
-  let mockLoginUseCase = { execute: jest.fn() };
-  let mockLogoutUseCase = { execute: jest.fn() };
-  let mockResetPasswordUseCase = { execute: jest.fn() };
-  let mockResetPasswordEmailUseCase = { execute: jest.fn() };
-  let mockEnableMFAUseCase = { execute: jest.fn() };
-  let mockGetProfileUseCase = { execute: jest.fn() };
-  let mockUpdateProfileUseCase = { execute: jest.fn() };
-  let mockSendVerificationEmailUseCase = { execute: jest.fn() };
-  let mockRefreshTokenUseCase = { execute: jest.fn() };
-  let mockResponse = {
+  const tokenService = { verifyToken: jest.fn() };
+  const mockRegisterUseCase = { execute: jest.fn() };
+  const mockVerifyEmailUseCase = { execute: jest.fn() };
+  const mockLoginUseCase = { execute: jest.fn() };
+  const mockLogoutUseCase = { execute: jest.fn() };
+  const mockResetPasswordUseCase = { execute: jest.fn() };
+  const mockResetPasswordEmailUseCase = { execute: jest.fn() };
+  const mockEnableMFAUseCase = { execute: jest.fn() };
+  const mockGetProfileUseCase = { execute: jest.fn() };
+  const mockUpdateProfileUseCase = { execute: jest.fn() };
+  const mockSendVerificationEmailUseCase = { execute: jest.fn() };
+  const mockRefreshTokenUseCase = { execute: jest.fn() };
+  const mockResponse = {
     cookie: jest.fn(),
     clearCookie: jest.fn(),
   };
@@ -89,8 +89,10 @@ describe('AuthController', () => {
     try {
       return await controller.register(dto);
     } catch (error) {
-      expect(error.status).toBe(400);
-      expect(error.message).toBe('Email must be a valid email address');
+      const httpError = error as { status: number; message: string };
+
+      expect(httpError.status).toBe(400);
+      expect(httpError.message).toBe('Email must be a valid email address');
       expect(mockRegisterUseCase.execute).not.toHaveBeenCalledWith(dto);
     }
   });
@@ -180,6 +182,37 @@ describe('AuthController', () => {
           message: 'Access token refreshed successfully',
         });
       });
+  });
+
+  it('auth/logout should invalidate refresh token and clear cookie', async () => {
+    mockLogoutUseCase.execute.mockResolvedValue(undefined);
+
+    await expect(
+      controller.logout(
+        { cookies: { refreshToken: 'refresh-token' } } as any,
+        mockResponse as any,
+      ),
+    ).resolves.toEqual({ message: 'User logged out successfully' });
+
+    expect(mockLogoutUseCase.execute).toHaveBeenCalledWith('refresh-token');
+    expect(mockResponse.clearCookie).toHaveBeenCalledWith(
+      'refreshToken',
+      expect.any(Object),
+    );
+  });
+
+  it('auth/logout should succeed and clear cookie when refresh token is missing', async () => {
+    mockLogoutUseCase.execute.mockResolvedValue(undefined);
+
+    await expect(
+      controller.logout({ cookies: {} } as any, mockResponse as any),
+    ).resolves.toEqual({ message: 'User logged out successfully' });
+
+    expect(mockLogoutUseCase.execute).toHaveBeenCalledWith(undefined);
+    expect(mockResponse.clearCookie).toHaveBeenCalledWith(
+      'refreshToken',
+      expect.any(Object),
+    );
   });
 
   it('auth/reset-password should return 200 and success message for valid request', () => {

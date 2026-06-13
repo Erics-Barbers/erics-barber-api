@@ -21,6 +21,7 @@ import { UpdateProfileUseCase } from './application/use-cases/update-profile.use
 import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-case';
 import { SendVerificationEmailUseCase } from './application/use-cases/send-verification-email.use-case';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case';
+import { UnverifiedUserCleanupService } from './application/services/unverified-user-cleanup.service';
 
 @Module({
   imports: [PrismaModule],
@@ -43,6 +44,7 @@ import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-c
     UpdateProfileUseCase,
     SendVerificationEmailUseCase,
     RefreshTokenUseCase,
+    UnverifiedUserCleanupService,
   ],
   exports: [AuthService, TokenService],
 })

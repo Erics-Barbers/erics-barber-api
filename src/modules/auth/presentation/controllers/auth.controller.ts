@@ -183,7 +183,7 @@ export class AuthController {
   @Throttle({ default: { limit: 30, ttl: ONE_MINUTE } })
   @Post('logout')
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies['refreshToken'] as string;
+    const refreshToken = req.cookies?.['refreshToken'] as string | undefined;
     await this.logoutUseCase.execute(refreshToken);
     res.clearCookie('refreshToken', {
       httpOnly: true,

@@ -1,12 +1,13 @@
-/* eslint-disable prettier/prettier */
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class UpdateBarberDto {
   @ApiProperty({
-    example: 'dfsdfmk',
-    description: 'Barber ID',
+    example: '+44 7907882325',
+    description: "Barber's phone number",
+    required: false,
   })
+  @IsOptional()
   @IsString()
-  readonly id!: string;
+  readonly phone?: string;
 }

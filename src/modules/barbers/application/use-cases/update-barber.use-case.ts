@@ -5,9 +5,8 @@ import { UpdateBarberDto } from '../../presentation/dto/update-barber.dto';
 @Injectable()
 export class UpdateBarberUseCase {
   constructor(private readonly barbersService: BarbersService) {}
-  async execute(dto: UpdateBarberDto): Promise<void> {
-    const { id, ...data } = dto;
-    const barber = this.barbersService.updateBarber(id, data);
+  async execute(id: string, dto: UpdateBarberDto): Promise<void> {
+    const barber = this.barbersService.updateBarber(id, dto);
     return barber;
   }
 }

@@ -1,3 +1,7 @@
+jest.mock('src/infrastructure/mail/resend.service', () => ({
+  ResendService: jest.fn(),
+}));
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { BookingController } from './booking.controller';
 import { GetBookingsUseCase } from '../application/use-cases/get-bookings.use-case';

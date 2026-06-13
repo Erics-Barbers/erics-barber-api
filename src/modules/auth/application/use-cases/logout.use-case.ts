@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
 import {
   RefreshTokenPayload,
@@ -12,13 +12,17 @@ export class LogoutUseCase {
     private readonly tokenService: TokenService,
   ) {}
 
-  async execute(refreshToken: string): Promise<void> {
+  async execute(refreshToken?: string): Promise<void> {
+    if (!refreshToken) {
+      return;
+    }
+
     const decoded = this.tokenService.decodeToken(
       refreshToken,
-    ) as RefreshTokenPayload;
+    ) as RefreshTokenPayload | null;
 
     if (!decoded || !decoded.sub || decoded.tokenType !== 'refresh') {
-      throw new UnauthorizedException('Invalid refresh token');
+      return;
     }
 
     await this.authService.invalidateRefreshToken(decoded.sub, refreshToken);

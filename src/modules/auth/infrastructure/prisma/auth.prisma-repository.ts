@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { BcryptService } from '../services/bcrypt.service';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
-import { User, Prisma, Session } from 'src/generated/prisma/client';
+import { User, Prisma, Session, Role } from 'src/generated/prisma/client';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
 import { UserProfile } from 'src/common/types/profile';
 import { UserUpdateInput } from 'src/generated/prisma/models';
@@ -61,6 +61,18 @@ export class AuthService {
 
   async deleteUser(userId: string): Promise<void> {
     await this.prismaService.user.delete({ where: { id: userId } });
+  }
+
+  async deleteUnverifiedCustomersCreatedBefore(cutoff: Date): Promise<number> {
+    const result = await this.prismaService.user.deleteMany({
+      where: {
+        isEmailVerified: false,
+        role: Role.CUSTOMER,
+        createdAt: { lt: cutoff },
+      },
+    });
+
+    return result.count;
   }
 
   async validateUserCredentials(
