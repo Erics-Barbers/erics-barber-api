@@ -3,16 +3,16 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class MfaDto {
   @ApiProperty({
-    example: 'user-id-123',
-    description: 'User ID for MFA verification',
+    example: 'cmfchallenge123',
+    description: 'MFA challenge ID returned by the login endpoint',
   })
   @IsString()
-  readonly userId!: string;
+  readonly challengeId!: string;
 
   @ApiProperty({
     example: '123456',
-    description: 'MFA code for verification',
+    description: 'Short-lived MFA code sent to the user',
   })
   @IsString()
-  readonly mfaCode!: string;
+  readonly code!: string;
 }

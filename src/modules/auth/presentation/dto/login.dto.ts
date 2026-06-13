@@ -1,5 +1,6 @@
 import { IsEmail, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { MfaMethod } from 'src/generated/prisma/client';
 
 export class LoginRequestDto {
   @ApiProperty({
@@ -35,3 +36,28 @@ export class LoginResponseDto {
   })
   refreshToken!: string;
 }
+
+export class LoginMfaRequiredResponseDto {
+  @ApiProperty({ example: 'MFA required' })
+  message!: string;
+
+  @ApiProperty({ example: 'MFA_REQUIRED' })
+  code!: 'MFA_REQUIRED';
+
+  @ApiProperty({ example: true })
+  mfaRequired!: true;
+
+  @ApiProperty({
+    example: 'cmfchallenge123',
+    description: 'Short-lived challenge ID to submit with the MFA code',
+  })
+  challengeId!: string;
+
+  @ApiProperty({
+    enum: MfaMethod,
+    example: MfaMethod.EMAIL,
+  })
+  mfaMethod!: MfaMethod;
+}
+
+export type LoginResultDto = LoginResponseDto | LoginMfaRequiredResponseDto;

@@ -17,7 +17,6 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
-import { EnableMfaUseCase } from '../../application/use-cases/enable-mfa.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../../application/use-cases/logout.use-case';
 import { RegisterUseCase } from '../../application/use-cases/register.use-case';
@@ -26,7 +25,7 @@ import { ResetPasswordEmailUseCase } from '../../application/use-cases/reset-pas
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email.use-case';
 import { SendVerificationEmailUseCase } from '../../application/use-cases/send-verification-email.use-case';
 
-import { LoginRequestDto, LoginResponseDto } from '../dto/login.dto';
+import { LoginRequestDto, LoginResultDto } from '../dto/login.dto';
 import { MfaDto } from '../dto/mfa.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
@@ -46,6 +45,9 @@ import { Request, Response } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { UserProfile } from 'src/common/types/profile';
 import { AuthLoggingInterceptor } from '../interceptors/auth-logging.interceptor';
+import { VerifyMfaUseCase } from '../../application/use-cases/verify-mfa.use-case';
+import { UpdateMfaPreferenceUseCase } from '../../application/use-cases/update-mfa-preference.use-case';
+import { MfaPreferenceDto } from '../dto/mfa-preference.dto';
 
 const ONE_MINUTE = 60_000;
 const ONE_HOUR = 60 * 60_000;
@@ -60,11 +62,12 @@ export class AuthController {
     private readonly logoutUseCase: LogoutUseCase,
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
     private readonly resetPasswordEmailUseCase: ResetPasswordEmailUseCase,
-    private readonly enableMFAUseCase: EnableMfaUseCase,
+    private readonly verifyMfaUseCase: VerifyMfaUseCase,
     private readonly getProfileUseCase: GetProfileUseCase,
     private readonly updateProfileUseCase: UpdateProfileUseCase,
     private readonly sendVerificationEmailUseCase: SendVerificationEmailUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
+    private readonly updateMfaPreferenceUseCase: UpdateMfaPreferenceUseCase,
   ) {}
 
   @HttpCode(201)
@@ -126,7 +129,6 @@ export class AuthController {
   @HttpCode(200)
   @ApiOkResponse({
     description: 'User logged in successfully',
-    type: LoginResponseDto,
   })
   @Throttle({ default: { limit: 10, ttl: ONE_MINUTE } })
   @Post('login')
@@ -134,11 +136,14 @@ export class AuthController {
     @UserAgent() userAgent: string,
     @Res({ passthrough: true }) res: Response,
     @Body() dto: LoginRequestDto,
-  ): Promise<LoginResponseDto> {
-    const { accessToken, refreshToken } = await this.loginUseCase.execute(
-      dto,
-      userAgent,
-    );
+  ): Promise<LoginResultDto> {
+    const result = await this.loginUseCase.execute(dto, userAgent);
+
+    if ('mfaRequired' in result) {
+      return result;
+    }
+
+    const { accessToken, refreshToken } = result;
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       path: '/auth',
@@ -219,13 +224,45 @@ export class AuthController {
 
   @HttpCode(200)
   @ApiOkResponse({
-    description: 'MFA enabled successfully',
+    description: 'MFA verified successfully',
   })
   @Throttle({ default: { limit: 10, ttl: ONE_MINUTE } })
   @Post('verify-mfa')
-  async verifyMFA(@Body() dto: MfaDto) {
-    await this.enableMFAUseCase.execute(dto);
-    return { message: 'MFA enabled successfully' };
+  async verifyMFA(
+    @UserAgent() userAgent: string,
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: MfaDto,
+  ) {
+    const { accessToken, refreshToken } = await this.verifyMfaUseCase.execute(
+      dto,
+      userAgent,
+    );
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      path: '/auth',
+      secure: true,
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    return {
+      accessToken,
+      refreshToken,
+      message: 'MFA verified successfully',
+    };
+  }
+
+  @HttpCode(200)
+  @ApiOkResponse({
+    description: 'MFA preference updated successfully',
+  })
+  @UseGuards(AuthGuard)
+  @Put('mfa-preference')
+  async updateMfaPreference(
+    @CurrentUser() userId: string,
+    @Body() dto: MfaPreferenceDto,
+  ) {
+    await this.updateMfaPreferenceUseCase.execute(userId, dto);
+    return { message: 'MFA preference updated successfully' };
   }
 
   @HttpCode(200)

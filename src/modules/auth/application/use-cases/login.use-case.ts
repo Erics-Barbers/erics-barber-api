@@ -1,10 +1,20 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { randomInt } from 'crypto';
 import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
-import { TokenService } from 'src/modules/auth/infrastructure/services/jwt.service';
-import { LoginRequestDto } from '../../presentation/dto/login.dto';
+import {
+  RefreshTokenPayload,
+  TokenPair,
+  TokenService,
+} from 'src/modules/auth/infrastructure/services/jwt.service';
+import {
+  LoginMfaRequiredResponseDto,
+  LoginRequestDto,
+} from '../../presentation/dto/login.dto';
 import { SessionCreateInput } from 'src/generated/prisma/models/Session';
-import { User } from 'src/generated/prisma/client';
+import { MfaMethod, User } from 'src/generated/prisma/client';
 import { BcryptService } from '../../infrastructure/services/bcrypt.service';
+
+const MFA_CODE_TTL_MS = 10 * 60 * 1000;
 
 @Injectable()
 export class LoginUseCase {
@@ -17,8 +27,12 @@ export class LoginUseCase {
   async execute(
     dto: LoginRequestDto,
     userAgent: string,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  ): Promise<TokenPair | LoginMfaRequiredResponseDto> {
     const user = await this.validateUserCredentials(dto);
+    if (user.mfaEnabled) {
+      return await this.createMfaChallenge(user);
+    }
+
     const tokens = await this.issueTokens(user, userAgent);
     return tokens;
   }
@@ -38,13 +52,16 @@ export class LoginUseCase {
     return user;
   }
 
-  async issueTokens(
-    user: User,
-    userAgent: string,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  async issueTokens(user: User, userAgent: string): Promise<TokenPair> {
     const tokens = await this.tokenService.issueTokens(user);
-    const decoded: any = this.tokenService.decodeToken(tokens.refreshToken);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const decoded = this.tokenService.decodeToken(
+      tokens.refreshToken,
+    ) as RefreshTokenPayload | null;
+
+    if (!decoded?.exp) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
     const expiresAt = new Date(decoded.exp * 1000);
     const hashedRefreshToken = await this.bcryptService.hashInput(
       tokens.refreshToken,
@@ -58,5 +75,33 @@ export class LoginUseCase {
 
     await this.authService.createSession(sessionData);
     return tokens;
+  }
+
+  private async createMfaChallenge(
+    user: User,
+  ): Promise<LoginMfaRequiredResponseDto> {
+    const code = this.generateMfaCode();
+    const codeHash = await this.bcryptService.hashInput(code);
+    const method = user.mfaMethod ?? MfaMethod.EMAIL;
+    const challenge = await this.authService.createMfaChallenge({
+      userId: user.id,
+      codeHash,
+      method,
+      expiresAt: new Date(Date.now() + MFA_CODE_TTL_MS),
+    });
+
+    await this.authService.sendMfaCodeEmail(user.email, code);
+
+    return {
+      message: 'MFA required',
+      code: 'MFA_REQUIRED',
+      mfaRequired: true,
+      challengeId: challenge.id,
+      mfaMethod: method,
+    };
+  }
+
+  private generateMfaCode(): string {
+    return randomInt(0, 1_000_000).toString().padStart(6, '0');
   }
 }

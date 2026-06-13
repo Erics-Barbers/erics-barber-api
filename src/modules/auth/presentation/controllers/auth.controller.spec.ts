@@ -6,7 +6,6 @@ import { LoginUseCase } from '../../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../../application/use-cases/logout.use-case';
 import { ResetPasswordUseCase } from '../../application/use-cases/reset-password.use-case';
 import { ResetPasswordEmailUseCase } from '../../application/use-cases/reset-password-email.use-case';
-import { EnableMfaUseCase } from '../../application/use-cases/enable-mfa.use-case';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile.use-case';
 import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case';
 import { RegisterDto } from '../dto/register.dto';
@@ -15,6 +14,9 @@ import { LoginRequestDto } from '../dto/login.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { SendVerificationEmailUseCase } from '../../application/use-cases/send-verification-email.use-case';
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case';
+import { VerifyMfaUseCase } from '../../application/use-cases/verify-mfa.use-case';
+import { MfaMethod } from 'src/generated/prisma/client';
+import { UpdateMfaPreferenceUseCase } from '../../application/use-cases/update-mfa-preference.use-case';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -25,11 +27,12 @@ describe('AuthController', () => {
   const mockLogoutUseCase = { execute: jest.fn() };
   const mockResetPasswordUseCase = { execute: jest.fn() };
   const mockResetPasswordEmailUseCase = { execute: jest.fn() };
-  const mockEnableMFAUseCase = { execute: jest.fn() };
+  const mockVerifyMfaUseCase = { execute: jest.fn() };
   const mockGetProfileUseCase = { execute: jest.fn() };
   const mockUpdateProfileUseCase = { execute: jest.fn() };
   const mockSendVerificationEmailUseCase = { execute: jest.fn() };
   const mockRefreshTokenUseCase = { execute: jest.fn() };
+  const mockUpdateMfaPreferenceUseCase = { execute: jest.fn() };
   const mockResponse = {
     cookie: jest.fn(),
     clearCookie: jest.fn(),
@@ -49,7 +52,7 @@ describe('AuthController', () => {
           provide: ResetPasswordEmailUseCase,
           useValue: mockResetPasswordEmailUseCase,
         },
-        { provide: EnableMfaUseCase, useValue: mockEnableMFAUseCase },
+        { provide: VerifyMfaUseCase, useValue: mockVerifyMfaUseCase },
         { provide: GetProfileUseCase, useValue: mockGetProfileUseCase },
         { provide: UpdateProfileUseCase, useValue: mockUpdateProfileUseCase },
         {
@@ -57,6 +60,10 @@ describe('AuthController', () => {
           useValue: mockSendVerificationEmailUseCase,
         },
         { provide: RefreshTokenUseCase, useValue: mockRefreshTokenUseCase },
+        {
+          provide: UpdateMfaPreferenceUseCase,
+          useValue: mockUpdateMfaPreferenceUseCase,
+        },
       ],
     }).compile();
 
@@ -154,6 +161,32 @@ describe('AuthController', () => {
       });
   });
 
+  it('auth/login should return MFA_REQUIRED without setting cookies when MFA is enabled', async () => {
+    const dto: LoginRequestDto = {
+      email: 'controller-test@example.com',
+      password: 'Password123',
+    };
+    mockLoginUseCase.execute.mockResolvedValue({
+      message: 'MFA required',
+      code: 'MFA_REQUIRED',
+      mfaRequired: true,
+      challengeId: 'challenge-id',
+      mfaMethod: MfaMethod.EMAIL,
+    });
+
+    await expect(
+      controller.login('test-agent', mockResponse as any, dto),
+    ).resolves.toEqual({
+      message: 'MFA required',
+      code: 'MFA_REQUIRED',
+      mfaRequired: true,
+      challengeId: 'challenge-id',
+      mfaMethod: MfaMethod.EMAIL,
+    });
+
+    expect(mockResponse.cookie).not.toHaveBeenCalled();
+  });
+
   it('auth/refresh should rotate refresh token and return new tokens', async () => {
     mockRefreshTokenUseCase.execute.mockResolvedValue({
       accessToken: 'new-access-token',
@@ -237,5 +270,55 @@ describe('AuthController', () => {
 
     await expect(controller.resetPassword(dto)).rejects.toThrow(error);
     expect(mockResetPasswordUseCase.execute).toHaveBeenCalledWith(dto);
+  });
+
+  it('auth/verify-mfa should issue tokens and set refresh cookie', async () => {
+    mockVerifyMfaUseCase.execute.mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    });
+
+    await expect(
+      controller.verifyMFA('test-agent', mockResponse as any, {
+        challengeId: 'challenge-id',
+        code: '123456',
+      }),
+    ).resolves.toEqual({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      message: 'MFA verified successfully',
+    });
+
+    expect(mockVerifyMfaUseCase.execute).toHaveBeenCalledWith(
+      {
+        challengeId: 'challenge-id',
+        code: '123456',
+      },
+      'test-agent',
+    );
+    expect(mockResponse.cookie).toHaveBeenCalledWith(
+      'refreshToken',
+      'refresh-token',
+      expect.any(Object),
+    );
+  });
+
+  it('auth/mfa-preference should update the current user MFA preference', async () => {
+    mockUpdateMfaPreferenceUseCase.execute.mockResolvedValue(undefined);
+
+    await expect(
+      controller.updateMfaPreference('user-id', {
+        enabled: true,
+        method: MfaMethod.EMAIL,
+      }),
+    ).resolves.toEqual({ message: 'MFA preference updated successfully' });
+
+    expect(mockUpdateMfaPreferenceUseCase.execute).toHaveBeenCalledWith(
+      'user-id',
+      {
+        enabled: true,
+        method: MfaMethod.EMAIL,
+      },
+    );
   });
 });

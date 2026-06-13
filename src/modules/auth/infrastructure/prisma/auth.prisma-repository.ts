@@ -1,10 +1,51 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { BcryptService } from '../services/bcrypt.service';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
-import { User, Prisma, Session, Role } from 'src/generated/prisma/client';
+import { User, Prisma, Session } from 'src/generated/prisma/client';
+import { Role } from 'src/generated/prisma/enums';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
 import { UserProfile } from 'src/common/types/profile';
 import { UserUpdateInput } from 'src/generated/prisma/models';
+
+type MfaMethod = 'EMAIL';
+
+type MfaChallenge = {
+  id: string;
+  userId: string;
+  codeHash: string;
+  method: MfaMethod;
+  expiresAt: Date;
+  consumedAt: Date | null;
+  createdAt: Date;
+};
+
+type MfaChallengeDelegate = {
+  deleteMany(args: { where: { expiresAt: { lt: Date } } }): Promise<{
+    count: number;
+  }>;
+  create(args: {
+    data: {
+      user: { connect: { id: string } };
+      codeHash: string;
+      method: MfaMethod;
+      expiresAt: Date;
+    };
+  }): Promise<MfaChallenge>;
+  findUnique(args: { where: { id: string } }): Promise<MfaChallenge | null>;
+  update(args: {
+    where: { id: string };
+    data: { consumedAt: Date };
+  }): Promise<MfaChallenge>;
+};
+
+type AuthTransactionClient = {
+  session: {
+    create(args: { data: Prisma.SessionCreateInput }): Promise<unknown>;
+  };
+  mfaChallenge: Pick<MfaChallengeDelegate, 'update'>;
+};
+
+const DEFAULT_MFA_METHOD: MfaMethod = 'EMAIL';
 
 @Injectable()
 export class AuthService {
@@ -13,6 +54,14 @@ export class AuthService {
     private readonly bcryptService: BcryptService,
     private readonly resendService: ResendService,
   ) {}
+
+  private get mfaChallengeDelegate(): MfaChallengeDelegate {
+    return (
+      this.prismaService as unknown as {
+        mfaChallenge: MfaChallengeDelegate;
+      }
+    ).mfaChallenge;
+  }
 
   async getProfile(userId: string): Promise<UserProfile> {
     const user = await this.prismaService.user.findUnique({
@@ -75,6 +124,28 @@ export class AuthService {
     return result.count;
   }
 
+  async deleteExpiredSessions(referenceDate = new Date()): Promise<number> {
+    const result = await this.prismaService.session.deleteMany({
+      where: {
+        expiresAt: { lt: referenceDate },
+      },
+    });
+
+    return result.count;
+  }
+
+  async deleteExpiredMfaChallenges(
+    referenceDate = new Date(),
+  ): Promise<number> {
+    const result = await this.mfaChallengeDelegate.deleteMany({
+      where: {
+        expiresAt: { lt: referenceDate },
+      },
+    });
+
+    return result.count;
+  }
+
   async validateUserCredentials(
     email: string,
     password: string,
@@ -99,6 +170,52 @@ export class AuthService {
     await this.prismaService.$transaction(async (tx) => {
       await tx.session.delete({ where: { id: oldSessionId } });
       await tx.session.create({ data: newSessionData });
+    });
+  }
+
+  async createMfaChallenge(data: {
+    userId: string;
+    codeHash: string;
+    method: MfaMethod;
+    expiresAt: Date;
+  }): Promise<MfaChallenge> {
+    return await this.mfaChallengeDelegate.create({
+      data: {
+        user: { connect: { id: data.userId } },
+        codeHash: data.codeHash,
+        method: data.method,
+        expiresAt: data.expiresAt,
+      },
+    });
+  }
+
+  async findMfaChallengeById(
+    challengeId: string,
+  ): Promise<MfaChallenge | null> {
+    return await this.mfaChallengeDelegate.findUnique({
+      where: { id: challengeId },
+    });
+  }
+
+  async consumeMfaChallenge(challengeId: string): Promise<void> {
+    await this.mfaChallengeDelegate.update({
+      where: { id: challengeId },
+      data: { consumedAt: new Date() },
+    });
+  }
+
+  async completeMfaChallenge(
+    challengeId: string,
+    sessionData: Prisma.SessionCreateInput,
+  ): Promise<void> {
+    await this.prismaService.$transaction(async (tx) => {
+      const transactionClient = tx as unknown as AuthTransactionClient;
+
+      await transactionClient.session.create({ data: sessionData });
+      await transactionClient.mfaChallenge.update({
+        where: { id: challengeId },
+        data: { consumedAt: new Date() },
+      });
     });
   }
 
@@ -152,10 +269,14 @@ export class AuthService {
     });
   }
 
-  async enableMfa(userId: string, mfaSecret: string): Promise<void> {
+  async setMfaPreference(
+    userId: string,
+    enabled: boolean,
+    method: MfaMethod = DEFAULT_MFA_METHOD,
+  ): Promise<void> {
     await this.prismaService.user.update({
       where: { id: userId },
-      data: { mfaSecret } as Prisma.UserUpdateInput,
+      data: { mfaEnabled: enabled, mfaMethod: method },
     });
   }
 
@@ -186,6 +307,17 @@ export class AuthService {
       <h1>Password Reset</h1>
       <p>You can reset your password by clicking the link below:</p>
       <a href="${resetLink}">Reset Password</a>
+    `;
+    await this.resendService.sendEmail(email, subject, emailContent);
+  }
+
+  async sendMfaCodeEmail(email: string, code: string): Promise<void> {
+    const subject = "Your Eric's Barbers login code";
+    const emailContent = `
+      <h1>Login Code</h1>
+      <p>Your login code is:</p>
+      <p><strong>${code}</strong></p>
+      <p>This code expires in 10 minutes.</p>
     `;
     await this.resendService.sendEmail(email, subject, emailContent);
   }

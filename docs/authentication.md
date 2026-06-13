@@ -99,13 +99,46 @@ UNVERIFIED_USER_TTL_DAYS=7
 
 This keeps abandoned registrations from accumulating while giving users time to find the verification email or request another one.
 
-## MFA Status
+## Expired Auth State Cleanup
 
-MFA is not a complete flow yet. The current endpoint is a placeholder/foundation and is not integrated into login.
+Expired refresh sessions and MFA challenges are removed by a scheduled backend job.
 
-A complete MFA flow should:
+Default policy:
 
-1. Validate email/password.
-2. If MFA is enabled, return an MFA-required response without issuing full tokens.
-3. Verify the MFA code.
-4. Issue access/refresh tokens only after MFA succeeds.
+- run daily at 3am server time
+- delete `Session` rows where `expiresAt` is in the past
+- delete `MfaChallenge` rows where `expiresAt` is in the past
+
+`Session.expiresAt` and `MfaChallenge.expiresAt` are indexed so cleanup can scan expired rows efficiently.
+
+## MFA
+
+MFA is implemented as a modest email-code flow.
+
+Users can enable or disable MFA through authenticated API calls to:
+
+```text
+PUT /auth/mfa-preference
+```
+
+When `User.mfaEnabled = true`, login behaves differently:
+
+1. The API validates email/password.
+2. The API creates a short-lived `MfaChallenge` with a hashed 6-digit code.
+3. The raw code is sent to the user's email.
+4. Login returns `code: MFA_REQUIRED`, the `challengeId`, and the MFA method.
+5. No access token, refresh token, or session is created yet.
+6. The client submits the challenge id and code to `POST /auth/verify-mfa`.
+7. The API verifies the code, consumes the challenge, creates the refresh session, and returns access/refresh tokens.
+
+Only `EMAIL` MFA is currently supported. The code expires after 10 minutes.
+
+## External Providers
+
+External provider login is not implemented yet. The database has `ExternalAccount` for future provider identities, and provider UI/API work should remain hidden unless the relevant feature flag is enabled.
+
+Default flag:
+
+```text
+AUTH_EXTERNAL_PROVIDERS_ENABLED=false
+```

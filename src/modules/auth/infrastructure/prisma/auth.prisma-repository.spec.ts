@@ -30,6 +30,56 @@ describe('AuthService repository', () => {
     });
   });
 
+  it('deletes expired sessions before the reference date', async () => {
+    const deleteMany = jest.fn().mockResolvedValue({ count: 5 });
+    const prismaService = {
+      session: {
+        deleteMany,
+      },
+    };
+    const authService = new AuthService(
+      prismaService as never,
+      {} as never,
+      {} as never,
+    );
+    const referenceDate = new Date('2026-06-13T03:00:00.000Z');
+
+    await expect(
+      authService.deleteExpiredSessions(referenceDate),
+    ).resolves.toBe(5);
+
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: {
+        expiresAt: { lt: referenceDate },
+      },
+    });
+  });
+
+  it('deletes expired MFA challenges before the reference date', async () => {
+    const deleteMany = jest.fn().mockResolvedValue({ count: 3 });
+    const prismaService = {
+      mfaChallenge: {
+        deleteMany,
+      },
+    };
+    const authService = new AuthService(
+      prismaService as never,
+      {} as never,
+      {} as never,
+    );
+    const referenceDate = new Date('2026-06-13T03:00:00.000Z');
+
+    await expect(
+      authService.deleteExpiredMfaChallenges(referenceDate),
+    ).resolves.toBe(3);
+
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: {
+        expiresAt: { lt: referenceDate },
+      },
+    });
+  });
+
   it('rotates a refresh token session in a transaction', async () => {
     const deleteSession = jest.fn().mockResolvedValue(undefined);
     const createSession = jest.fn().mockResolvedValue(undefined);
