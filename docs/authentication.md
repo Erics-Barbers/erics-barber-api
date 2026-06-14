@@ -44,15 +44,15 @@ Every request DTO should decorate every accepted property. With whitelist valida
 Refresh tokens are rotated. A successful refresh does this:
 
 1. Verify the submitted refresh token.
-2. Confirm it matches an active stored session hash.
+2. Confirm it matches a stored session hash in the user's unexpired session history.
 3. Issue a new access token and refresh token.
 4. Hash the new refresh token.
-5. In one database transaction, delete the old session and create the new session.
+5. In one database transaction, mark the old session as rotated, create the new session in the same family, and link the old session to its replacement.
 6. Return both tokens to the BFF only after the transaction commits.
 
-This makes refresh tokens one-use. Reusing an old refresh token should fail.
+This makes refresh tokens one-use while retaining enough session history to detect replay.
 
-Future hardening: consider session-family replay detection so reuse of an old rotated token can revoke related sessions.
+If an already-rotated refresh token is submitted again, the API treats it as replay and revokes the active sessions in that session family.
 
 ## Logout
 

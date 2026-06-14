@@ -6,13 +6,17 @@ import {
 } from '../../../infrastructure/services/jwt.service';
 import { BcryptService } from '../../../infrastructure/services/bcrypt.service';
 import { Role } from 'src/generated/prisma/client';
+import { SessionRevocationReason } from 'src/generated/prisma/enums';
 
 describe('RefreshTokenUseCase', () => {
   let refreshTokenUseCase: RefreshTokenUseCase;
   let authService: jest.Mocked<
     Pick<
       AuthService,
-      'findSessionsByUserId' | 'findUserById' | 'rotateRefreshTokenSession'
+      | 'findRefreshTokenSessionCandidatesByUserId'
+      | 'findUserById'
+      | 'rotateRefreshTokenSession'
+      | 'revokeRefreshTokenSessionFamily'
     >
   >;
   let tokenService: jest.Mocked<
@@ -24,9 +28,10 @@ describe('RefreshTokenUseCase', () => {
 
   beforeEach(() => {
     authService = {
-      findSessionsByUserId: jest.fn(),
+      findRefreshTokenSessionCandidatesByUserId: jest.fn(),
       findUserById: jest.fn(),
       rotateRefreshTokenSession: jest.fn(),
+      revokeRefreshTokenSessionFamily: jest.fn(),
     };
     tokenService = {
       verifyToken: jest.fn(),
@@ -53,11 +58,15 @@ describe('RefreshTokenUseCase', () => {
       iat: 1,
       exp: 2,
     } satisfies RefreshTokenPayload);
-    authService.findSessionsByUserId.mockResolvedValue([
+    authService.findRefreshTokenSessionCandidatesByUserId.mockResolvedValue([
       {
         id: 'old-session-id',
         userId: 'userId',
         refreshToken: 'hashed-refresh-token',
+        familyId: 'session-family-id',
+        replacedBySessionId: null,
+        revokedAt: null,
+        revokedReason: null,
         userAgent: 'test-agent',
         ipAddress: null,
         expiresAt: new Date('2026-06-20T00:00:00.000Z'),
@@ -98,7 +107,9 @@ describe('RefreshTokenUseCase', () => {
       refreshToken: 'new-refresh-token',
     });
 
-    expect(authService.findSessionsByUserId).toHaveBeenCalledWith('userId');
+    expect(
+      authService.findRefreshTokenSessionCandidatesByUserId,
+    ).toHaveBeenCalledWith('userId');
     expect(bcryptService.compareHashedInput).toHaveBeenCalledWith(
       refreshToken,
       'hashed-refresh-token',
@@ -114,8 +125,65 @@ describe('RefreshTokenUseCase', () => {
       'old-session-id',
       expect.objectContaining({
         refreshToken: 'hashed-new-refresh-token',
+        familyId: 'session-family-id',
         userAgent: 'test-agent',
       }),
     );
+  });
+
+  it('should revoke the session family when a rotated refresh token is replayed', async () => {
+    const refreshToken = 'rotated-refresh-token';
+    tokenService.verifyToken.mockResolvedValue({
+      sub: 'userId',
+      tokenType: 'refresh',
+      iat: 1,
+      exp: 2,
+    } satisfies RefreshTokenPayload);
+    authService.findRefreshTokenSessionCandidatesByUserId.mockResolvedValue([
+      {
+        id: 'old-session-id',
+        userId: 'userId',
+        refreshToken: 'hashed-rotated-refresh-token',
+        familyId: 'session-family-id',
+        replacedBySessionId: 'current-session-id',
+        revokedAt: new Date('2026-06-13T00:05:00.000Z'),
+        revokedReason: SessionRevocationReason.ROTATED,
+        userAgent: 'test-agent',
+        ipAddress: null,
+        expiresAt: new Date('2026-06-20T00:00:00.000Z'),
+        createdAt: new Date('2026-06-13T00:00:00.000Z'),
+        barberId: null,
+      },
+      {
+        id: 'current-session-id',
+        userId: 'userId',
+        refreshToken: 'hashed-current-refresh-token',
+        familyId: 'session-family-id',
+        replacedBySessionId: null,
+        revokedAt: null,
+        revokedReason: null,
+        userAgent: 'test-agent',
+        ipAddress: null,
+        expiresAt: new Date('2026-06-20T00:05:00.000Z'),
+        createdAt: new Date('2026-06-13T00:05:00.000Z'),
+        barberId: null,
+      },
+    ]);
+    bcryptService.compareHashedInput.mockImplementation((_input, hash) =>
+      Promise.resolve(hash === 'hashed-rotated-refresh-token'),
+    );
+    authService.revokeRefreshTokenSessionFamily.mockResolvedValue(1);
+
+    await expect(
+      refreshTokenUseCase.execute(refreshToken, 'test-agent'),
+    ).rejects.toThrow('Refresh token replay detected');
+
+    expect(authService.revokeRefreshTokenSessionFamily).toHaveBeenCalledWith(
+      'session-family-id',
+      SessionRevocationReason.REPLAY_DETECTED,
+    );
+    expect(authService.findUserById).not.toHaveBeenCalled();
+    expect(tokenService.issueTokens).not.toHaveBeenCalled();
+    expect(authService.rotateRefreshTokenSession).not.toHaveBeenCalled();
   });
 });

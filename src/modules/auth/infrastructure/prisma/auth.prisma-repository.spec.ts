@@ -1,6 +1,7 @@
 import { Role } from 'src/generated/prisma/client';
 import { AuthService } from './auth.prisma-repository';
 import { SessionCreateInput } from 'src/generated/prisma/models/Session';
+import { SessionRevocationReason } from 'src/generated/prisma/enums';
 
 describe('AuthService repository', () => {
   it('deletes only unverified customer users created before the cutoff', async () => {
@@ -81,20 +82,20 @@ describe('AuthService repository', () => {
   });
 
   it('rotates a refresh token session in a transaction', async () => {
-    const deleteSession = jest.fn().mockResolvedValue(undefined);
-    const createSession = jest.fn().mockResolvedValue(undefined);
+    const updateSession = jest.fn().mockResolvedValue({ id: 'old-session-id' });
+    const createSession = jest.fn().mockResolvedValue({ id: 'new-session-id' });
     const transaction = jest.fn().mockImplementation(
       async (
         callback: (tx: {
           session: {
-            delete: typeof deleteSession;
+            update: typeof updateSession;
             create: typeof createSession;
           };
         }) => Promise<void>,
       ) =>
         callback({
           session: {
-            delete: deleteSession,
+            update: updateSession,
             create: createSession,
           },
         }),
@@ -110,6 +111,7 @@ describe('AuthService repository', () => {
     const newSessionData: SessionCreateInput = {
       user: { connect: { id: 'user-id' } },
       refreshToken: 'hashed-new-refresh-token',
+      familyId: 'session-family-id',
       expiresAt: new Date('2026-06-20T00:00:00.000Z'),
       userAgent: 'test-agent',
     };
@@ -119,12 +121,55 @@ describe('AuthService repository', () => {
     ).resolves.toBeUndefined();
 
     expect(transaction).toHaveBeenCalledTimes(1);
-    expect(deleteSession).toHaveBeenCalledWith({
+    expect(updateSession).toHaveBeenNthCalledWith(1, {
       where: { id: 'old-session-id' },
+      data: {
+        revokedAt: expect.any(Date) as Date,
+        revokedReason: SessionRevocationReason.ROTATED,
+      },
     });
     expect(createSession).toHaveBeenCalledWith({ data: newSessionData });
-    expect(deleteSession.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(updateSession).toHaveBeenNthCalledWith(2, {
+      where: { id: 'old-session-id' },
+      data: { replacedBySessionId: 'new-session-id' },
+    });
+    expect(updateSession.mock.invocationCallOrder[0]).toBeLessThan(
       createSession.mock.invocationCallOrder[0],
     );
+    expect(createSession.mock.invocationCallOrder[0]).toBeLessThan(
+      updateSession.mock.invocationCallOrder[1],
+    );
+  });
+
+  it('revokes active sessions in a refresh token session family', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const prismaService = {
+      session: {
+        updateMany,
+      },
+    };
+    const authService = new AuthService(
+      prismaService as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      authService.revokeRefreshTokenSessionFamily(
+        'session-family-id',
+        SessionRevocationReason.REPLAY_DETECTED,
+      ),
+    ).resolves.toBe(1);
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        familyId: 'session-family-id',
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: expect.any(Date) as Date,
+        revokedReason: SessionRevocationReason.REPLAY_DETECTED,
+      },
+    });
   });
 });

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { BcryptService } from '../services/bcrypt.service';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { User, Prisma, Session } from 'src/generated/prisma/client';
-import { Role } from 'src/generated/prisma/enums';
+import { Role, SessionRevocationReason } from 'src/generated/prisma/enums';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
 import { UserProfile } from 'src/common/types/profile';
 import { UserUpdateInput } from 'src/generated/prisma/models';
@@ -168,8 +168,19 @@ export class AuthService {
     newSessionData: Prisma.SessionCreateInput,
   ): Promise<void> {
     await this.prismaService.$transaction(async (tx) => {
-      await tx.session.delete({ where: { id: oldSessionId } });
-      await tx.session.create({ data: newSessionData });
+      const revokedAt = new Date();
+      await tx.session.update({
+        where: { id: oldSessionId },
+        data: {
+          revokedAt,
+          revokedReason: SessionRevocationReason.ROTATED,
+        },
+      });
+      const newSession = await tx.session.create({ data: newSessionData });
+      await tx.session.update({
+        where: { id: oldSessionId },
+        data: { replacedBySessionId: newSession.id },
+      });
     });
   }
 
@@ -230,8 +241,38 @@ export class AuthService {
       where: {
         userId,
         expiresAt: { gt: new Date() },
+        revokedAt: null,
       },
     });
+  }
+
+  async findRefreshTokenSessionCandidatesByUserId(
+    userId: string,
+  ): Promise<Session[]> {
+    return await this.prismaService.session.findMany({
+      where: {
+        userId,
+        expiresAt: { gt: new Date() },
+      },
+    });
+  }
+
+  async revokeRefreshTokenSessionFamily(
+    familyId: string,
+    reason: SessionRevocationReason = SessionRevocationReason.REPLAY_DETECTED,
+  ): Promise<number> {
+    const result = await this.prismaService.session.updateMany({
+      where: {
+        familyId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+        revokedReason: reason,
+      },
+    });
+
+    return result.count;
   }
 
   async invalidateRefreshToken(

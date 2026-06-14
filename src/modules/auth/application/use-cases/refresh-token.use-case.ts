@@ -7,6 +7,7 @@ import {
 import { BcryptService } from '../../infrastructure/services/bcrypt.service';
 import { SessionCreateInput } from 'src/generated/prisma/models/Session';
 import { Session } from 'src/generated/prisma/client';
+import { SessionRevocationReason } from 'src/generated/prisma/enums';
 
 @Injectable()
 export class RefreshTokenUseCase {
@@ -43,6 +44,7 @@ export class RefreshTokenUseCase {
     const sessionData: SessionCreateInput = {
       user: { connect: { id: user.id } },
       refreshToken: hashedRefreshToken,
+      familyId: matchingSession.familyId,
       expiresAt: new Date(refreshPayload.exp * 1000),
       userAgent,
     };
@@ -67,7 +69,10 @@ export class RefreshTokenUseCase {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const sessions = await this.authService.findSessionsByUserId(decoded.sub);
+    const sessions =
+      await this.authService.findRefreshTokenSessionCandidatesByUserId(
+        decoded.sub,
+      );
     const matchingSession = await Promise.any(
       sessions.map(async (session) => {
         const isTokenValid = await this.bcryptService.compareHashedInput(
@@ -87,6 +92,14 @@ export class RefreshTokenUseCase {
       throw new UnauthorizedException(
         'Session not found or refresh token invalid',
       );
+    }
+
+    if (matchingSession.revokedAt) {
+      await this.authService.revokeRefreshTokenSessionFamily(
+        matchingSession.familyId,
+        SessionRevocationReason.REPLAY_DETECTED,
+      );
+      throw new UnauthorizedException('Refresh token replay detected');
     }
 
     return {

@@ -78,18 +78,24 @@ model MfaChallenge {
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  userId       String
-  refreshToken String   @unique
-  userAgent    String?
-  ipAddress    String?
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id])
-  barber       Barber?  @relation(fields: [barberId], references: [id])
-  barberId     String?
+  id                  String                   @id @default(cuid())
+  userId              String
+  refreshToken        String                   @unique
+  familyId            String                   @default(cuid())
+  replacedBySessionId String?
+  revokedAt           DateTime?
+  revokedReason       SessionRevocationReason?
+  userAgent           String?
+  ipAddress           String?
+  expiresAt           DateTime
+  createdAt           DateTime                 @default(now())
+  user                User                     @relation(fields: [userId], references: [id])
+  barber              Barber?                  @relation(fields: [barberId], references: [id])
+  barberId            String?
 
   @@index([expiresAt])
+  @@index([familyId])
+  @@index([userId, expiresAt])
 }
 
 model Booking {
@@ -114,6 +120,11 @@ enum Role {
 
 enum MfaMethod {
   EMAIL
+}
+
+enum SessionRevocationReason {
+  ROTATED
+  REPLAY_DETECTED
 }
 
 enum Services {
