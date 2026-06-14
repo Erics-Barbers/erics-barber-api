@@ -17,6 +17,13 @@ import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.u
 import { VerifyMfaUseCase } from '../../application/use-cases/verify-mfa.use-case';
 import { MfaMethod } from 'src/generated/prisma/client';
 import { UpdateMfaPreferenceUseCase } from '../../application/use-cases/update-mfa-preference.use-case';
+import { Request, Response } from 'express';
+
+type MockResponse = jest.Mocked<Pick<Response, 'cookie' | 'clearCookie'>>;
+
+function createMockRequest(cookies: Record<string, string>): Request {
+  return { cookies } as unknown as Request;
+}
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -33,7 +40,7 @@ describe('AuthController', () => {
   const mockSendVerificationEmailUseCase = { execute: jest.fn() };
   const mockRefreshTokenUseCase = { execute: jest.fn() };
   const mockUpdateMfaPreferenceUseCase = { execute: jest.fn() };
-  const mockResponse = {
+  const mockResponse: MockResponse = {
     cookie: jest.fn(),
     clearCookie: jest.fn(),
   };
@@ -112,7 +119,7 @@ describe('AuthController', () => {
     });
 
     return controller
-      .verifyEmail('test-agent', mockResponse as any, { token })
+      .verifyEmail('test-agent', mockResponse as unknown as Response, { token })
       .then((response) => {
         expect(mockVerifyEmailUseCase.execute).toHaveBeenCalledWith(
           token,
@@ -142,7 +149,7 @@ describe('AuthController', () => {
     });
 
     return controller
-      .login('test-agent', mockResponse as any, dto)
+      .login('test-agent', mockResponse as unknown as Response, dto)
       .then((response) => {
         expect(mockLoginUseCase.execute).toHaveBeenCalledWith(
           dto,
@@ -175,7 +182,7 @@ describe('AuthController', () => {
     });
 
     await expect(
-      controller.login('test-agent', mockResponse as any, dto),
+      controller.login('test-agent', mockResponse as unknown as Response, dto),
     ).resolves.toEqual({
       message: 'MFA required',
       code: 'MFA_REQUIRED',
@@ -196,8 +203,8 @@ describe('AuthController', () => {
     return controller
       .refreshTokens(
         'test-agent',
-        { cookies: { refreshToken: 'old-refresh-token' } } as any,
-        mockResponse as any,
+        createMockRequest({ refreshToken: 'old-refresh-token' }),
+        mockResponse as unknown as Response,
       )
       .then((response) => {
         expect(mockRefreshTokenUseCase.execute).toHaveBeenCalledWith(
@@ -222,8 +229,8 @@ describe('AuthController', () => {
 
     await expect(
       controller.logout(
-        { cookies: { refreshToken: 'refresh-token' } } as any,
-        mockResponse as any,
+        createMockRequest({ refreshToken: 'refresh-token' }),
+        mockResponse as unknown as Response,
       ),
     ).resolves.toEqual({ message: 'User logged out successfully' });
 
@@ -238,7 +245,10 @@ describe('AuthController', () => {
     mockLogoutUseCase.execute.mockResolvedValue(undefined);
 
     await expect(
-      controller.logout({ cookies: {} } as any, mockResponse as any),
+      controller.logout(
+        createMockRequest({}),
+        mockResponse as unknown as Response,
+      ),
     ).resolves.toEqual({ message: 'User logged out successfully' });
 
     expect(mockLogoutUseCase.execute).toHaveBeenCalledWith(undefined);
@@ -279,7 +289,7 @@ describe('AuthController', () => {
     });
 
     await expect(
-      controller.verifyMFA('test-agent', mockResponse as any, {
+      controller.verifyMFA('test-agent', mockResponse as unknown as Response, {
         challengeId: 'challenge-id',
         code: '123456',
       }),

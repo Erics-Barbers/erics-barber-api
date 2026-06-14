@@ -43,11 +43,11 @@ import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.u
 import { UserAgent } from 'src/common/decorators/user-agent.decorator';
 import { Request, Response } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { UserProfile } from 'src/common/types/profile';
 import { AuthLoggingInterceptor } from '../interceptors/auth-logging.interceptor';
 import { VerifyMfaUseCase } from '../../application/use-cases/verify-mfa.use-case';
 import { UpdateMfaPreferenceUseCase } from '../../application/use-cases/update-mfa-preference.use-case';
 import { MfaPreferenceDto } from '../dto/mfa-preference.dto';
+import { UserUpdateInput } from 'src/generated/prisma/models';
 
 const ONE_MINUTE = 60_000;
 const ONE_HOUR = 60 * 60_000;
@@ -176,7 +176,7 @@ export class AuthController {
   @Put('profile')
   async updateProfile(
     @CurrentUser() userId: string,
-    @Body() profileData: UserProfile,
+    @Body() profileData: UserUpdateInput,
   ) {
     return await this.updateProfileUseCase.execute(userId, profileData);
   }

@@ -1,9 +1,14 @@
 import { ResetPasswordEmailUseCase } from '../reset-password-email.use-case';
+import { AuthService } from '../../../infrastructure/prisma/auth.prisma-repository';
+import { TokenService } from '../../../infrastructure/services/jwt.service';
+import { MfaMethod, Role, User } from 'src/generated/prisma/client';
 
 describe('ResetPasswordEmailUseCase', () => {
   let resetPasswordEmailUseCase: ResetPasswordEmailUseCase;
-  let authService: any;
-  let tokenService: any;
+  let authService: jest.Mocked<
+    Pick<AuthService, 'findUserByEmail' | 'sendResetPasswordEmail'>
+  >;
+  let tokenService: jest.Mocked<Pick<TokenService, 'issuePasswordResetToken'>>;
 
   beforeEach(() => {
     authService = {
@@ -14,16 +19,15 @@ describe('ResetPasswordEmailUseCase', () => {
       issuePasswordResetToken: jest.fn(),
     };
     resetPasswordEmailUseCase = new ResetPasswordEmailUseCase(
-      authService,
-      tokenService,
+      authService as unknown as AuthService,
+      tokenService as unknown as TokenService,
     );
   });
 
   it('should send reset password email if user exists', async () => {
-    const mockUser = {
-      id: 'userId',
+    const mockUser = createUser({
       email: 'test@example.com',
-    };
+    });
     authService.findUserByEmail.mockResolvedValue(mockUser);
     tokenService.issuePasswordResetToken.mockResolvedValue(
       'password-reset-token',
@@ -49,3 +53,19 @@ describe('ResetPasswordEmailUseCase', () => {
     expect(authService.sendResetPasswordEmail).not.toHaveBeenCalled();
   });
 });
+
+function createUser(overrides: Partial<User> = {}): User {
+  return {
+    id: 'userId',
+    name: 'Test User',
+    email: 'test@example.com',
+    passwordHash: 'hashed-password',
+    role: Role.CUSTOMER,
+    createdAt: new Date('2026-06-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-06-14T00:00:00.000Z'),
+    isEmailVerified: true,
+    mfaEnabled: false,
+    mfaMethod: MfaMethod.EMAIL,
+    ...overrides,
+  };
+}

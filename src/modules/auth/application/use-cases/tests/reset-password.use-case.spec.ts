@@ -1,11 +1,16 @@
 import { ResetPasswordDto } from 'src/modules/auth/presentation/dto/reset-password.dto';
 import { ResetPasswordUseCase } from '../reset-password.use-case';
 import { UnauthorizedException } from '@nestjs/common';
+import { AuthService } from '../../../infrastructure/prisma/auth.prisma-repository';
+import {
+  PasswordResetTokenPayload,
+  TokenService,
+} from '../../../infrastructure/services/jwt.service';
 
 describe('ResetPasswordUseCase', () => {
   let resetPasswordUseCase: ResetPasswordUseCase;
-  let authService: any;
-  let tokenService: any;
+  let authService: jest.Mocked<Pick<AuthService, 'resetPassword'>>;
+  let tokenService: jest.Mocked<Pick<TokenService, 'verifyToken'>>;
 
   beforeEach(() => {
     authService = {
@@ -14,7 +19,10 @@ describe('ResetPasswordUseCase', () => {
     tokenService = {
       verifyToken: jest.fn(),
     };
-    resetPasswordUseCase = new ResetPasswordUseCase(authService, tokenService);
+    resetPasswordUseCase = new ResetPasswordUseCase(
+      authService as unknown as AuthService,
+      tokenService as unknown as TokenService,
+    );
   });
 
   it('should reset password successfully', async () => {
@@ -22,10 +30,13 @@ describe('ResetPasswordUseCase', () => {
       token: 'password-reset-token',
       newPassword: 'NewPassword1',
     };
-    tokenService.verifyToken.mockResolvedValue({
+    const payload: PasswordResetTokenPayload = {
       email: 'test@example.com',
       tokenType: 'passwordReset',
-    });
+      iat: 0,
+      exp: 1,
+    };
+    tokenService.verifyToken.mockResolvedValue(payload);
     authService.resetPassword.mockResolvedValue(undefined);
     await resetPasswordUseCase.execute(dto);
     expect(tokenService.verifyToken).toHaveBeenCalledWith(
@@ -41,6 +52,8 @@ describe('ResetPasswordUseCase', () => {
     tokenService.verifyToken.mockResolvedValue({
       email: 'test@example.com',
       tokenType: 'access',
+      iat: 0,
+      exp: 1,
     });
 
     await expect(

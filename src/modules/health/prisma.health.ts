@@ -5,6 +5,10 @@ import {
 } from '@nestjs/terminus';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown Prisma health error';
+}
+
 @Injectable()
 export class PrismaHealthIndicator {
   constructor(
@@ -17,10 +21,10 @@ export class PrismaHealthIndicator {
       // Perform a simple query to check DB connectivity
       await this.prisma.$queryRaw`SELECT 1`;
       return this.healthIndicatorService.check(key).up();
-    } catch (err) {
+    } catch (err: unknown) {
       return this.healthIndicatorService
         .check(key)
-        .down({ message: err.message });
+        .down({ message: getErrorMessage(err) });
     }
   }
 }

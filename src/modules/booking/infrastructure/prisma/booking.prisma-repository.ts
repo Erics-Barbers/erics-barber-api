@@ -40,7 +40,7 @@ export class BookingService {
     await this.resendService.sendEmail(
       '',
       'Booking Confirmation',
-      `<p>Your booking for ${dto.appointmentDate} has been confirmed.</p>`,
+      `<p>Your booking for ${dto.appointmentDate.toISOString()} has been confirmed.</p>`,
     );
   }
 

@@ -1,5 +1,7 @@
 export class PaymentService {
-  async processPayment(amount: number, method: string) {
-    // Payment processing logic here
+  processPayment(amount: number, method: string): void {
+    void amount;
+    void method;
+    // Payment processing logic goes here when the payments module is built out.
   }
 }
