@@ -47,7 +47,7 @@ import { AuthLoggingInterceptor } from '../interceptors/auth-logging.interceptor
 import { VerifyMfaUseCase } from '../../application/use-cases/verify-mfa.use-case';
 import { UpdateMfaPreferenceUseCase } from '../../application/use-cases/update-mfa-preference.use-case';
 import { MfaPreferenceDto } from '../dto/mfa-preference.dto';
-import { UserUpdateInput } from 'src/generated/prisma/models';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
 
 const ONE_MINUTE = 60_000;
 const ONE_HOUR = 60 * 60_000;
@@ -176,7 +176,7 @@ export class AuthController {
   @Put('profile')
   async updateProfile(
     @CurrentUser() userId: string,
-    @Body() profileData: UserUpdateInput,
+    @Body() profileData: UpdateProfileDto,
   ) {
     return await this.updateProfileUseCase.execute(userId, profileData);
   }

@@ -282,6 +282,28 @@ describe('AuthController', () => {
     expect(mockResetPasswordUseCase.execute).toHaveBeenCalledWith(dto);
   });
 
+  it('auth/profile should update the current user profile', async () => {
+    mockUpdateProfileUseCase.execute.mockResolvedValue({
+      id: 'user-id',
+      name: 'Updated Name',
+      email: 'test@example.com',
+      isEmailVerified: true,
+    });
+
+    await expect(
+      controller.updateProfile('user-id', { name: 'Updated Name' }),
+    ).resolves.toEqual({
+      id: 'user-id',
+      name: 'Updated Name',
+      email: 'test@example.com',
+      isEmailVerified: true,
+    });
+
+    expect(mockUpdateProfileUseCase.execute).toHaveBeenCalledWith('user-id', {
+      name: 'Updated Name',
+    });
+  });
+
   it('auth/verify-mfa should issue tokens and set refresh cookie', async () => {
     mockVerifyMfaUseCase.execute.mockResolvedValue({
       accessToken: 'access-token',

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
 import { UserProfile } from 'src/common/types/profile';
-import { UserUpdateInput } from 'src/generated/prisma/models';
+import { UpdateProfileDto } from '../../presentation/dto/update-profile.dto';
 
 @Injectable()
 export class UpdateProfileUseCase {
@@ -9,8 +9,10 @@ export class UpdateProfileUseCase {
 
   async execute(
     userId: string,
-    profileData: UserUpdateInput,
+    profileData: UpdateProfileDto,
   ): Promise<UserProfile> {
-    return await this.authService.updateProfile(userId, profileData);
+    return await this.authService.updateProfile(userId, {
+      name: profileData.name.trim(),
+    });
   }
 }
