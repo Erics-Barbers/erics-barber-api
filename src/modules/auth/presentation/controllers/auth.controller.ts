@@ -108,21 +108,20 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @Body() dto: VerifyEmailRequestDto,
   ): Promise<VerifyEmailResponseDto> {
-    const { accessToken, refreshToken } = await this.verifyEmailUseCase.execute(
-      dto.token,
-      userAgent,
-    );
+    const { accessToken, refreshToken, refreshMaxAgeSeconds } =
+      await this.verifyEmailUseCase.execute(dto.token, userAgent);
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       path: '/auth',
       secure: true,
       sameSite: 'none',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: refreshMaxAgeSeconds * 1000,
     });
     return {
       message: 'Email verified successfully',
       accessToken,
       refreshToken,
+      refreshMaxAgeSeconds,
     };
   }
 
@@ -143,17 +142,18 @@ export class AuthController {
       return result;
     }
 
-    const { accessToken, refreshToken } = result;
+    const { accessToken, refreshToken, refreshMaxAgeSeconds } = result;
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       path: '/auth',
       secure: true,
       sameSite: 'none',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: refreshMaxAgeSeconds * 1000,
     });
     return {
       accessToken,
       refreshToken,
+      refreshMaxAgeSeconds,
       message: 'User logged in successfully',
     };
   }
@@ -233,20 +233,19 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @Body() dto: MfaDto,
   ) {
-    const { accessToken, refreshToken } = await this.verifyMfaUseCase.execute(
-      dto,
-      userAgent,
-    );
+    const { accessToken, refreshToken, refreshMaxAgeSeconds } =
+      await this.verifyMfaUseCase.execute(dto, userAgent);
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       path: '/auth',
       secure: true,
       sameSite: 'none',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: refreshMaxAgeSeconds * 1000,
     });
     return {
       accessToken,
       refreshToken,
+      refreshMaxAgeSeconds,
       message: 'MFA verified successfully',
     };
   }
@@ -278,19 +277,20 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<RefreshTokenResponseDto> {
     const oldRefreshToken = req.cookies['refreshToken'] as string;
-    const { accessToken, refreshToken } =
+    const { accessToken, refreshToken, refreshMaxAgeSeconds } =
       await this.refreshTokenUseCase.execute(oldRefreshToken, userAgent);
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       path: '/auth',
       secure: true,
       sameSite: 'none',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: refreshMaxAgeSeconds * 1000,
     });
 
     return {
       accessToken,
       refreshToken,
+      refreshMaxAgeSeconds,
       message: 'Access token refreshed successfully',
     };
   }

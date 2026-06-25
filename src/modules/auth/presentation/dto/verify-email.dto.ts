@@ -26,4 +26,10 @@ export class VerifyEmailResponseDto {
       'Refresh token. Intended for trusted server-side clients such as the Next.js BFF to set as an HttpOnly browser cookie.',
   })
   refreshToken!: string;
+
+  @ApiProperty({
+    example: 43200,
+    description: 'Refresh cookie lifetime the BFF should apply, in seconds.',
+  })
+  refreshMaxAgeSeconds!: number;
 }

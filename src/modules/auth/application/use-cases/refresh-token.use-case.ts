@@ -20,7 +20,11 @@ export class RefreshTokenUseCase {
   async execute(
     refreshToken: string,
     userAgent?: string,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    refreshMaxAgeSeconds: number;
+  }> {
     const { decoded, matchingSession } =
       await this.checkTokenIsValid(refreshToken);
     const user = await this.authService.findUserById(decoded.sub);
@@ -29,7 +33,9 @@ export class RefreshTokenUseCase {
       throw new UnauthorizedException('User not found');
     }
 
-    const tokens = await this.tokenService.issueTokens(user);
+    const tokens = await this.tokenService.issueTokens(user, {
+      rememberMe: matchingSession.rememberMe,
+    });
     const refreshPayload = this.tokenService.decodeToken(
       tokens.refreshToken,
     ) as RefreshTokenPayload | null;
@@ -47,6 +53,7 @@ export class RefreshTokenUseCase {
       familyId: matchingSession.familyId,
       expiresAt: new Date(refreshPayload.exp * 1000),
       userAgent,
+      rememberMe: matchingSession.rememberMe,
     };
 
     await this.authService.rotateRefreshTokenSession(

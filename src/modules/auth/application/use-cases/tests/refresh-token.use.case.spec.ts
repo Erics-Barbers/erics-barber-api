@@ -67,6 +67,7 @@ describe('RefreshTokenUseCase', () => {
         replacedBySessionId: null,
         revokedAt: null,
         revokedReason: null,
+        rememberMe: true,
         userAgent: 'test-agent',
         ipAddress: null,
         expiresAt: new Date('2026-06-20T00:00:00.000Z'),
@@ -91,6 +92,7 @@ describe('RefreshTokenUseCase', () => {
     tokenService.issueTokens.mockResolvedValue({
       accessToken: 'new-access-token',
       refreshToken: 'new-refresh-token',
+      refreshMaxAgeSeconds: 604_800,
     });
     tokenService.decodeToken.mockReturnValue({
       exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
@@ -105,6 +107,7 @@ describe('RefreshTokenUseCase', () => {
     ).resolves.toEqual({
       accessToken: 'new-access-token',
       refreshToken: 'new-refresh-token',
+      refreshMaxAgeSeconds: 604_800,
     });
 
     expect(
@@ -120,6 +123,7 @@ describe('RefreshTokenUseCase', () => {
         email: 'test@example.com',
         role: Role.CUSTOMER,
       }),
+      { rememberMe: true },
     );
     expect(authService.rotateRefreshTokenSession).toHaveBeenCalledWith(
       'old-session-id',
@@ -127,6 +131,7 @@ describe('RefreshTokenUseCase', () => {
         refreshToken: 'hashed-new-refresh-token',
         familyId: 'session-family-id',
         userAgent: 'test-agent',
+        rememberMe: true,
       }),
     );
   });
@@ -148,6 +153,7 @@ describe('RefreshTokenUseCase', () => {
         replacedBySessionId: 'current-session-id',
         revokedAt: new Date('2026-06-13T00:05:00.000Z'),
         revokedReason: SessionRevocationReason.ROTATED,
+        rememberMe: true,
         userAgent: 'test-agent',
         ipAddress: null,
         expiresAt: new Date('2026-06-20T00:00:00.000Z'),
@@ -162,6 +168,7 @@ describe('RefreshTokenUseCase', () => {
         replacedBySessionId: null,
         revokedAt: null,
         revokedReason: null,
+        rememberMe: true,
         userAgent: 'test-agent',
         ipAddress: null,
         expiresAt: new Date('2026-06-20T00:05:00.000Z'),

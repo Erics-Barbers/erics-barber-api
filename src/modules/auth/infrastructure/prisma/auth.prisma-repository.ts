@@ -14,6 +14,7 @@ type MfaChallenge = {
   userId: string;
   codeHash: string;
   method: MfaMethod;
+  rememberMe: boolean;
   expiresAt: Date;
   consumedAt: Date | null;
   createdAt: Date;
@@ -28,6 +29,7 @@ type MfaChallengeDelegate = {
       user: { connect: { id: string } };
       codeHash: string;
       method: MfaMethod;
+      rememberMe: boolean;
       expiresAt: Date;
     };
   }): Promise<MfaChallenge>;
@@ -188,6 +190,7 @@ export class AuthService {
     userId: string;
     codeHash: string;
     method: MfaMethod;
+    rememberMe: boolean;
     expiresAt: Date;
   }): Promise<MfaChallenge> {
     return await this.mfaChallengeDelegate.create({
@@ -195,6 +198,7 @@ export class AuthService {
         user: { connect: { id: data.userId } },
         codeHash: data.codeHash,
         method: data.method,
+        rememberMe: data.rememberMe,
         expiresAt: data.expiresAt,
       },
     });

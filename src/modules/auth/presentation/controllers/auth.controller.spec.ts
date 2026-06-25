@@ -116,6 +116,7 @@ describe('AuthController', () => {
     mockVerifyEmailUseCase.execute.mockResolvedValue({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
+      refreshMaxAgeSeconds: 43_200,
     });
 
     return controller
@@ -128,12 +129,13 @@ describe('AuthController', () => {
         expect(mockResponse.cookie).toHaveBeenCalledWith(
           'refreshToken',
           'refresh-token',
-          expect.any(Object),
+          expect.objectContaining({ maxAge: 43_200_000 }),
         );
         expect(response).toEqual({
           message: 'Email verified successfully',
           accessToken: 'access-token',
           refreshToken: 'refresh-token',
+          refreshMaxAgeSeconds: 43_200,
         });
       });
   });
@@ -146,6 +148,7 @@ describe('AuthController', () => {
     mockLoginUseCase.execute.mockResolvedValue({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
+      refreshMaxAgeSeconds: 604_800,
     });
 
     return controller
@@ -158,11 +161,12 @@ describe('AuthController', () => {
         expect(mockResponse.cookie).toHaveBeenCalledWith(
           'refreshToken',
           'refresh-token',
-          expect.any(Object),
+          expect.objectContaining({ maxAge: 604_800_000 }),
         );
         expect(response).toEqual({
           accessToken: 'access-token',
           refreshToken: 'refresh-token',
+          refreshMaxAgeSeconds: 604_800,
           message: 'User logged in successfully',
         });
       });
@@ -198,6 +202,7 @@ describe('AuthController', () => {
     mockRefreshTokenUseCase.execute.mockResolvedValue({
       accessToken: 'new-access-token',
       refreshToken: 'new-refresh-token',
+      refreshMaxAgeSeconds: 43_200,
     });
 
     return controller
@@ -214,11 +219,12 @@ describe('AuthController', () => {
         expect(mockResponse.cookie).toHaveBeenCalledWith(
           'refreshToken',
           'new-refresh-token',
-          expect.any(Object),
+          expect.objectContaining({ maxAge: 43_200_000 }),
         );
         expect(response).toEqual({
           accessToken: 'new-access-token',
           refreshToken: 'new-refresh-token',
+          refreshMaxAgeSeconds: 43_200,
           message: 'Access token refreshed successfully',
         });
       });
@@ -308,6 +314,7 @@ describe('AuthController', () => {
     mockVerifyMfaUseCase.execute.mockResolvedValue({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
+      refreshMaxAgeSeconds: 604_800,
     });
 
     await expect(
@@ -318,6 +325,7 @@ describe('AuthController', () => {
     ).resolves.toEqual({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
+      refreshMaxAgeSeconds: 604_800,
       message: 'MFA verified successfully',
     });
 
@@ -331,7 +339,7 @@ describe('AuthController', () => {
     expect(mockResponse.cookie).toHaveBeenCalledWith(
       'refreshToken',
       'refresh-token',
-      expect.any(Object),
+      expect.objectContaining({ maxAge: 604_800_000 }),
     );
   });
 

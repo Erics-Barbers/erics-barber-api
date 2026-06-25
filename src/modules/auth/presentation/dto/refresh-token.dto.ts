@@ -34,6 +34,12 @@ export class RefreshTokenResponseDto {
   readonly refreshToken!: string;
 
   @ApiProperty({
+    example: 604800,
+    description: 'Refresh cookie lifetime the BFF should apply, in seconds.',
+  })
+  readonly refreshMaxAgeSeconds!: number;
+
+  @ApiProperty({
     description: 'Success message',
   })
   @IsString()

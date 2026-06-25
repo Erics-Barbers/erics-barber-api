@@ -68,6 +68,7 @@ model MfaChallenge {
   userId     String
   codeHash   String
   method     MfaMethod @default(EMAIL)
+  rememberMe Boolean   @default(false)
   expiresAt  DateTime
   consumedAt DateTime?
   createdAt  DateTime  @default(now())
@@ -85,6 +86,7 @@ model Session {
   replacedBySessionId String?
   revokedAt           DateTime?
   revokedReason       SessionRevocationReason?
+  rememberMe          Boolean                  @default(false)
   userAgent           String?
   ipAddress           String?
   expiresAt           DateTime

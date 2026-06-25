@@ -61,6 +61,7 @@ describe('VerifyEmailUseCase', () => {
     tokenService.issueTokens.mockResolvedValue({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
+      refreshMaxAgeSeconds: 43_200,
     });
     const refreshPayload: RefreshTokenPayload = {
       sub: 'userId',
@@ -77,6 +78,7 @@ describe('VerifyEmailUseCase', () => {
     expect(result).toEqual({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
+      refreshMaxAgeSeconds: 43_200,
     });
     expect(authService.createSession).toHaveBeenCalledWith(
       expect.objectContaining({

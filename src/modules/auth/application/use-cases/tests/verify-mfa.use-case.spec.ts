@@ -56,6 +56,7 @@ describe('VerifyMfaUseCase', () => {
     tokenService.issueTokens.mockResolvedValue({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
+      refreshMaxAgeSeconds: 604_800,
     });
     tokenService.decodeToken.mockReturnValue({
       sub: 'user-id',
@@ -74,7 +75,13 @@ describe('VerifyMfaUseCase', () => {
     ).resolves.toEqual({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
+      refreshMaxAgeSeconds: 604_800,
     });
+
+    expect(tokenService.issueTokens).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'user-id' }),
+      { rememberMe: true },
+    );
 
     expect(bcryptService.compareHashedInput).toHaveBeenCalledWith(
       '123456',
@@ -85,6 +92,7 @@ describe('VerifyMfaUseCase', () => {
       expect.objectContaining({
         refreshToken: 'hashed-refresh-token',
         userAgent: 'test-agent',
+        rememberMe: true,
       }),
     );
   });
@@ -111,6 +119,7 @@ function createChallenge(overrides: Partial<MfaChallenge> = {}): MfaChallenge {
     userId: 'user-id',
     codeHash: 'hashed-code',
     method: MfaMethod.EMAIL,
+    rememberMe: true,
     expiresAt: new Date(Date.now() + 60_000),
     consumedAt: null,
     createdAt: new Date('2026-06-13T00:00:00.000Z'),

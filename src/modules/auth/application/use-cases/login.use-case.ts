@@ -29,11 +29,13 @@ export class LoginUseCase {
     userAgent: string,
   ): Promise<TokenPair | LoginMfaRequiredResponseDto> {
     const user = await this.validateUserCredentials(dto);
+    const rememberMe = dto.rememberMe ?? false;
+
     if (user.mfaEnabled) {
-      return await this.createMfaChallenge(user);
+      return await this.createMfaChallenge(user, rememberMe);
     }
 
-    const tokens = await this.issueTokens(user, userAgent);
+    const tokens = await this.issueTokens(user, userAgent, rememberMe);
     return tokens;
   }
 
@@ -52,8 +54,12 @@ export class LoginUseCase {
     return user;
   }
 
-  async issueTokens(user: User, userAgent: string): Promise<TokenPair> {
-    const tokens = await this.tokenService.issueTokens(user);
+  async issueTokens(
+    user: User,
+    userAgent: string,
+    rememberMe: boolean,
+  ): Promise<TokenPair> {
+    const tokens = await this.tokenService.issueTokens(user, { rememberMe });
     const decoded = this.tokenService.decodeToken(
       tokens.refreshToken,
     ) as RefreshTokenPayload | null;
@@ -71,6 +77,7 @@ export class LoginUseCase {
       refreshToken: hashedRefreshToken,
       expiresAt,
       userAgent,
+      rememberMe,
     };
 
     await this.authService.createSession(sessionData);
@@ -79,6 +86,7 @@ export class LoginUseCase {
 
   private async createMfaChallenge(
     user: User,
+    rememberMe: boolean,
   ): Promise<LoginMfaRequiredResponseDto> {
     const code = this.generateMfaCode();
     const codeHash = await this.bcryptService.hashInput(code);
@@ -87,6 +95,7 @@ export class LoginUseCase {
       userId: user.id,
       codeHash,
       method,
+      rememberMe,
       expiresAt: new Date(Date.now() + MFA_CODE_TTL_MS),
     });
 

@@ -51,6 +51,7 @@ describe('LoginUseCase', () => {
     tokenService.issueTokens.mockResolvedValue({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
+      refreshMaxAgeSeconds: 43_200,
     });
     tokenService.decodeToken.mockReturnValue({
       sub: 'userId',
@@ -68,17 +69,56 @@ describe('LoginUseCase', () => {
       'test@example.com',
       'Password1',
     );
-    expect(tokenService.issueTokens).toHaveBeenCalledWith(mockUser);
+    expect(tokenService.issueTokens).toHaveBeenCalledWith(mockUser, {
+      rememberMe: false,
+    });
     expect(authService.createSession).toHaveBeenCalledWith(
       expect.objectContaining({
         refreshToken: 'hashed-refresh-token',
         userAgent: 'test-agent',
+        rememberMe: false,
       }),
     );
     expect(result).toEqual({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
+      refreshMaxAgeSeconds: 43_200,
     });
+  });
+
+  it('should create a persistent session when rememberMe is true', async () => {
+    const mockUser = createUser({ mfaEnabled: false });
+    authService.validateUserCredentials.mockResolvedValue(mockUser);
+    tokenService.issueTokens.mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      refreshMaxAgeSeconds: 604_800,
+    });
+    tokenService.decodeToken.mockReturnValue({
+      sub: 'userId',
+      tokenType: 'refresh',
+      iat: 1,
+      exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+    } satisfies RefreshTokenPayload);
+    bcryptService.hashInput.mockResolvedValue('hashed-refresh-token');
+
+    await loginUseCase.execute(
+      {
+        email: 'test@example.com',
+        password: 'Password1',
+        rememberMe: true,
+      },
+      'test-agent',
+    );
+
+    expect(tokenService.issueTokens).toHaveBeenCalledWith(mockUser, {
+      rememberMe: true,
+    });
+    expect(authService.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rememberMe: true,
+      }),
+    );
   });
 
   it('should throw UnauthorizedException if email is not verified', async () => {
@@ -108,6 +148,7 @@ describe('LoginUseCase', () => {
       userId: 'userId',
       codeHash: 'hashed-mfa-code',
       method: MfaMethod.EMAIL,
+      rememberMe: true,
       expiresAt: new Date(Date.now() + 60_000),
       consumedAt: null,
       createdAt: new Date('2026-06-13T00:00:00.000Z'),
@@ -116,6 +157,7 @@ describe('LoginUseCase', () => {
     const dto: LoginRequestDto = {
       email: 'test@example.com',
       password: 'Password1',
+      rememberMe: true,
     };
 
     const result = await loginUseCase.execute(dto, 'test-agent');
@@ -127,6 +169,7 @@ describe('LoginUseCase', () => {
         userId: 'userId',
         codeHash: 'hashed-mfa-code',
         method: MfaMethod.EMAIL,
+        rememberMe: true,
       }),
     );
     expect(authService.sendMfaCodeEmail).toHaveBeenCalledWith(

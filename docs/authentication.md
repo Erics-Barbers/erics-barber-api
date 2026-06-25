@@ -22,9 +22,9 @@ The API returns access and refresh tokens to trusted server-side clients such as
 The BFF stores:
 
 - `accessToken`: HttpOnly browser cookie, 15 minute lifetime.
-- `refreshToken`: HttpOnly browser cookie, 7 day lifetime.
+- `refreshToken`: HttpOnly browser cookie, 12 hour lifetime by default, or 7 days when the user selects "keep me signed in".
 
-The API also sets an API-domain refresh cookie for compatibility, but the browser-facing cookie that matters to the UI is set by Next.js.
+The API returns `refreshMaxAgeSeconds` with token responses so the BFF can set the browser-facing refresh cookie to the same lifetime as the backend refresh session. The API also sets an API-domain refresh cookie for compatibility, but the browser-facing cookie that matters to the UI is set by Next.js.
 
 ## Request Validation
 
@@ -131,7 +131,7 @@ When `User.mfaEnabled = true`, login behaves differently:
 6. The client submits the challenge id and code to `POST /auth/verify-mfa`.
 7. The API verifies the code, consumes the challenge, creates the refresh session, and returns access/refresh tokens.
 
-Only `EMAIL` MFA is currently supported. The code expires after 10 minutes.
+Only `EMAIL` MFA is currently supported. The code expires after 10 minutes. If the user selected "keep me signed in" before the MFA step, that preference is stored on the MFA challenge and applied only after MFA succeeds.
 
 ## External Providers
 

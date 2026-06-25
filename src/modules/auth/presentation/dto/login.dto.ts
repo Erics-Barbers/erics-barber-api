@@ -1,4 +1,4 @@
-import { IsEmail, IsString } from 'class-validator';
+import { IsBoolean, IsEmail, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { MfaMethod } from 'src/generated/prisma/client';
 
@@ -17,6 +17,16 @@ export class LoginRequestDto {
   })
   @IsString()
   readonly password!: string;
+
+  @ApiProperty({
+    example: false,
+    required: false,
+    description:
+      'When true, issue a longer-lived refresh session for staying signed in.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  readonly rememberMe?: boolean;
 }
 
 export class LoginResponseDto {
@@ -35,6 +45,12 @@ export class LoginResponseDto {
       'Refresh token. Intended for trusted server-side clients such as the Next.js BFF to set as an HttpOnly browser cookie.',
   })
   refreshToken!: string;
+
+  @ApiProperty({
+    example: 604800,
+    description: 'Refresh cookie lifetime the BFF should apply, in seconds.',
+  })
+  refreshMaxAgeSeconds!: number;
 }
 
 export class LoginMfaRequiredResponseDto {

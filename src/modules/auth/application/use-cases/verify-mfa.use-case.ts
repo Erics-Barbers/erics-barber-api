@@ -45,7 +45,8 @@ export class VerifyMfaUseCase {
       throw new UnauthorizedException('Invalid MFA challenge');
     }
 
-    const tokens = await this.tokenService.issueTokens(user);
+    const rememberMe = challenge.rememberMe;
+    const tokens = await this.tokenService.issueTokens(user, { rememberMe });
     const decoded = this.tokenService.decodeToken(
       tokens.refreshToken,
     ) as RefreshTokenPayload | null;
@@ -62,6 +63,7 @@ export class VerifyMfaUseCase {
       refreshToken: hashedRefreshToken,
       expiresAt: new Date(decoded.exp * 1000),
       userAgent,
+      rememberMe,
     };
 
     await this.authService.completeMfaChallenge(challenge.id, sessionData);

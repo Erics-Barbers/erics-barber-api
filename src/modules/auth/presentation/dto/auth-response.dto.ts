@@ -12,16 +12,27 @@ export class AuthResponseDto {
     description: 'JWT refresh token',
   })
   refreshToken: string;
+  refreshMaxAgeSeconds: number;
 
-  constructor(accessToken: string, refreshToken: string) {
+  constructor(
+    accessToken: string,
+    refreshToken: string,
+    refreshMaxAgeSeconds: number,
+  ) {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
+    this.refreshMaxAgeSeconds = refreshMaxAgeSeconds;
   }
 
   static create(props: {
     accessToken: string;
     refreshToken: string;
+    refreshMaxAgeSeconds: number;
   }): AuthResponseDto {
-    return new AuthResponseDto(props.accessToken, props.refreshToken);
+    return new AuthResponseDto(
+      props.accessToken,
+      props.refreshToken,
+      props.refreshMaxAgeSeconds,
+    );
   }
 }

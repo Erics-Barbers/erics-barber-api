@@ -41,6 +41,7 @@ export interface PasswordResetTokenPayload {
 export interface TokenPair {
   accessToken: string;
   refreshToken: string;
+  refreshMaxAgeSeconds: number;
 }
 
 export interface UserTokenInfo {
@@ -60,6 +61,11 @@ type AuthTokenInput =
   | Omit<RefreshTokenPayload, 'iat' | 'exp'>
   | Omit<EmailVerificationTokenPayload, 'iat' | 'exp'>
   | Omit<PasswordResetTokenPayload, 'iat' | 'exp'>;
+
+const REFRESH_TOKEN_TTL = {
+  transient: '12h',
+  persistent: '7d',
+} as const;
 
 @Injectable()
 export class TokenService {
@@ -95,7 +101,13 @@ export class TokenService {
     );
   }
 
-  async issueTokens(user: UserTokenInfo): Promise<TokenPair> {
+  async issueTokens(
+    user: UserTokenInfo,
+    options: { rememberMe?: boolean } = {},
+  ): Promise<TokenPair> {
+    const refreshExpiresIn = options.rememberMe
+      ? REFRESH_TOKEN_TTL.persistent
+      : REFRESH_TOKEN_TTL.transient;
     const accessToken = await this.signToken(
       {
         sub: user.id,
@@ -107,9 +119,13 @@ export class TokenService {
     );
     const refreshToken = await this.signToken(
       { sub: user.id, tokenType: 'refresh' },
-      { expiresIn: '7d' },
+      { expiresIn: refreshExpiresIn },
     );
-    return { accessToken, refreshToken };
+    return {
+      accessToken,
+      refreshToken,
+      refreshMaxAgeSeconds: this.parseExpiresIn(refreshExpiresIn),
+    };
   }
 
   async verifyToken(token: string): Promise<AuthTokenPayload | null> {
