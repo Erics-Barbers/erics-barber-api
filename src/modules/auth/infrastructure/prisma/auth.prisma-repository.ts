@@ -344,8 +344,15 @@ export class AuthService {
     });
   }
 
-  async sendResetPasswordEmail(email: string, token: string): Promise<void> {
-    const clientBaseUrl = process.env.CLIENT_BASE_URL;
+  async sendResetPasswordEmail(
+    email: string,
+    token: string,
+    surface = 'CUSTOMER',
+  ): Promise<void> {
+    const clientBaseUrl =
+      surface === 'STAFF'
+        ? process.env.STAFF_CLIENT_BASE_URL || process.env.CLIENT_BASE_URL
+        : process.env.CLIENT_BASE_URL;
     const resetLink = `${clientBaseUrl}/reset-password?token=${token}`;
     const subject = 'Reset Your Password';
     const emailContent = `

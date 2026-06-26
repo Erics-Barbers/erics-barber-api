@@ -62,6 +62,23 @@ When a valid refresh token is present, the API invalidates the matching refresh-
 
 The UI also clears local auth cookies even if the API logout call fails. This keeps the user experience reliable.
 
+## Password Reset
+
+Password reset is a two-step flow:
+
+1. `POST /auth/reset-password-email` accepts an email address and an optional `surface`.
+2. The API sends a reset link if the user exists, while still returning a generic success response either way.
+3. `POST /auth/reset-password` accepts the reset token and new password.
+
+Supported reset surfaces:
+
+| Surface    | Reset link base URL |
+| ---------- | ------------------- |
+| `CUSTOMER` | `CLIENT_BASE_URL`   |
+| `STAFF`    | `STAFF_CLIENT_BASE_URL`, falling back to `CLIENT_BASE_URL` if unset |
+
+The frontend BFF chooses the surface from the customer or staff reset form. The API never accepts arbitrary reset redirect URLs from the browser.
+
 ## Rate Limits
 
 The app has a global `100/min` throttling default, with tighter limits on auth-sensitive endpoints:

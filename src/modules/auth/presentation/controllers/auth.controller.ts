@@ -207,7 +207,7 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: ONE_HOUR } })
   @Post('reset-password-email')
   async resetPasswordEmail(@Body() dto: ResetPasswordEmailDto) {
-    await this.resetPasswordEmailUseCase.execute(dto.email);
+    await this.resetPasswordEmailUseCase.execute(dto.email, dto.surface);
     return { message: 'Password reset link sent to email if it exists' };
   }
 

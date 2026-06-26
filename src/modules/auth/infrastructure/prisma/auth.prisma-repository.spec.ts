@@ -4,6 +4,14 @@ import { SessionCreateInput } from 'src/generated/prisma/models/Session';
 import { SessionRevocationReason } from 'src/generated/prisma/enums';
 
 describe('AuthService repository', () => {
+  const originalClientBaseUrl = process.env.CLIENT_BASE_URL;
+  const originalStaffClientBaseUrl = process.env.STAFF_CLIENT_BASE_URL;
+
+  afterEach(() => {
+    restoreEnv('CLIENT_BASE_URL', originalClientBaseUrl);
+    restoreEnv('STAFF_CLIENT_BASE_URL', originalStaffClientBaseUrl);
+  });
+
   it('deletes only unverified customer users created before the cutoff', async () => {
     const deleteMany = jest.fn().mockResolvedValue({ count: 2 });
     const prismaService = {
@@ -172,4 +180,38 @@ describe('AuthService repository', () => {
       },
     });
   });
+
+  it('uses the configured staff base URL for staff password reset emails', async () => {
+    process.env.CLIENT_BASE_URL = 'https://ui.example.test';
+    process.env.STAFF_CLIENT_BASE_URL = 'https://staff.example.test';
+    const sendEmail = jest.fn().mockResolvedValue(undefined);
+    const authService = new AuthService(
+      {} as never,
+      {} as never,
+      { sendEmail } as never,
+    );
+
+    await authService.sendResetPasswordEmail(
+      'barber@example.com',
+      'password-reset-token',
+      'STAFF',
+    );
+
+    expect(sendEmail).toHaveBeenCalledWith(
+      'barber@example.com',
+      'Reset Your Password',
+      expect.stringContaining(
+        'https://staff.example.test/reset-password?token=password-reset-token',
+      ),
+    );
+  });
 });
+
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[name];
+    return;
+  }
+
+  process.env[name] = value;
+}

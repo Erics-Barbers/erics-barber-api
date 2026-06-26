@@ -12,6 +12,7 @@ import { RegisterDto } from '../dto/register.dto';
 import { TokenService } from '../../infrastructure/services/jwt.service';
 import { LoginRequestDto } from '../dto/login.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { PasswordResetSurface } from '../dto/reset-password-email.dto';
 import { SendVerificationEmailUseCase } from '../../application/use-cases/send-verification-email.use-case';
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case';
 import { VerifyMfaUseCase } from '../../application/use-cases/verify-mfa.use-case';
@@ -274,6 +275,24 @@ describe('AuthController', () => {
       expect(mockResetPasswordUseCase.execute).toHaveBeenCalledWith(dto);
       expect(response).toEqual({ message: 'Password reset successfully' });
     });
+  });
+
+  it('auth/reset-password-email should request a staff reset link when surface is STAFF', async () => {
+    mockResetPasswordEmailUseCase.execute.mockResolvedValue(undefined);
+
+    await expect(
+      controller.resetPasswordEmail({
+        email: 'barber@example.com',
+        surface: PasswordResetSurface.STAFF,
+      }),
+    ).resolves.toEqual({
+      message: 'Password reset link sent to email if it exists',
+    });
+
+    expect(mockResetPasswordEmailUseCase.execute).toHaveBeenCalledWith(
+      'barber@example.com',
+      PasswordResetSurface.STAFF,
+    );
   });
 
   it('auth/reset-password should propagate reset token errors', async () => {

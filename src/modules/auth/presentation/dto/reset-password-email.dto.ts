@@ -1,5 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional } from 'class-validator';
+
+export enum PasswordResetSurface {
+  CUSTOMER = 'CUSTOMER',
+  STAFF = 'STAFF',
+}
 
 export class ResetPasswordEmailDto {
   @ApiProperty({
@@ -8,4 +13,15 @@ export class ResetPasswordEmailDto {
   })
   @IsEmail()
   email!: string;
+
+  @ApiProperty({
+    enum: PasswordResetSurface,
+    required: false,
+    description:
+      'Frontend surface that requested the reset link. Used to choose the correct configured reset URL.',
+    example: PasswordResetSurface.CUSTOMER,
+  })
+  @IsOptional()
+  @IsEnum(PasswordResetSurface)
+  surface?: PasswordResetSurface;
 }

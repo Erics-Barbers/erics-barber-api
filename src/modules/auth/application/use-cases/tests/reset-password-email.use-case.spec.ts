@@ -2,6 +2,7 @@ import { ResetPasswordEmailUseCase } from '../reset-password-email.use-case';
 import { AuthService } from '../../../infrastructure/prisma/auth.prisma-repository';
 import { TokenService } from '../../../infrastructure/services/jwt.service';
 import { MfaMethod, Role, User } from 'src/generated/prisma/client';
+import { PasswordResetSurface } from '../../../presentation/dto/reset-password-email.dto';
 
 describe('ResetPasswordEmailUseCase', () => {
   let resetPasswordEmailUseCase: ResetPasswordEmailUseCase;
@@ -40,6 +41,29 @@ describe('ResetPasswordEmailUseCase', () => {
     expect(authService.sendResetPasswordEmail).toHaveBeenCalledWith(
       mockUser.email,
       'password-reset-token',
+      PasswordResetSurface.CUSTOMER,
+    );
+  });
+
+  it('should send staff reset links when requested from the staff surface', async () => {
+    const mockUser = createUser({
+      email: 'barber@example.com',
+      role: Role.BARBER,
+    });
+    authService.findUserByEmail.mockResolvedValue(mockUser);
+    tokenService.issuePasswordResetToken.mockResolvedValue(
+      'password-reset-token',
+    );
+
+    await resetPasswordEmailUseCase.execute(
+      mockUser.email,
+      PasswordResetSurface.STAFF,
+    );
+
+    expect(authService.sendResetPasswordEmail).toHaveBeenCalledWith(
+      mockUser.email,
+      'password-reset-token',
+      PasswordResetSurface.STAFF,
     );
   });
 
