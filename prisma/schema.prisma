@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -9,28 +9,33 @@ datasource db {
 }
 
 model User {
-  id              String   @id @default(cuid())
-  name            String   @default("Anonymous")
-  email           String   @unique
+  id              String    @id @default(cuid())
+  name            String    @default("Anonymous")
+  email           String    @unique
   passwordHash    String?
-  role            Role     @default(CUSTOMER)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  isEmailVerified Boolean  @default(false)
+  role            Role      @default(CUSTOMER)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  isEmailVerified Boolean   @default(false)
+  mfaEnabled      Boolean   @default(false)
+  mfaMethod       MfaMethod @default(EMAIL)
 
   // Relations
-  accounts ExternalAccount[]
-  mfa      Mfa?
-  sessions Session[]
-  bookings Booking[]
-  barber   Barber?
+  accounts      ExternalAccount[]
+  mfa           Mfa?
+  mfaChallenges MfaChallenge[]
+  sessions      Session[]
+  bookings      Booking[]
+  barber        Barber?
 }
 
 model Barber {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  phone     String   @unique
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  displayName String   @unique
+  isActive    Boolean  @default(true)
+  phone       String   @unique
+  createdAt   DateTime @default(now())
 
   // Relations
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -58,17 +63,41 @@ model Mfa {
   user      User     @relation(fields: [userId], references: [id])
 }
 
+model MfaChallenge {
+  id         String    @id @default(cuid())
+  userId     String
+  codeHash   String
+  method     MfaMethod @default(EMAIL)
+  rememberMe Boolean   @default(false)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 model Session {
-  id           String   @id @default(cuid())
-  userId       String
-  refreshToken String   @unique
-  userAgent    String?
-  ipAddress    String?
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id])
-  barber       Barber?  @relation(fields: [barberId], references: [id])
-  barberId     String?
+  id                  String                   @id @default(cuid())
+  userId              String
+  refreshToken        String                   @unique
+  familyId            String                   @default(cuid())
+  replacedBySessionId String?
+  revokedAt           DateTime?
+  revokedReason       SessionRevocationReason?
+  rememberMe          Boolean                  @default(false)
+  userAgent           String?
+  ipAddress           String?
+  expiresAt           DateTime
+  createdAt           DateTime                 @default(now())
+  user                User                     @relation(fields: [userId], references: [id])
+  barber              Barber?                  @relation(fields: [barberId], references: [id])
+  barberId            String?
+
+  @@index([expiresAt])
+  @@index([familyId])
+  @@index([userId, expiresAt])
 }
 
 model Booking {
@@ -89,6 +118,15 @@ enum Role {
   ADMIN
   BARBER
   CUSTOMER
+}
+
+enum MfaMethod {
+  EMAIL
+}
+
+enum SessionRevocationReason {
+  ROTATED
+  REPLAY_DETECTED
 }
 
 enum Services {

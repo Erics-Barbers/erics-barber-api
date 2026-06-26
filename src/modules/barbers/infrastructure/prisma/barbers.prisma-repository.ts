@@ -19,8 +19,9 @@ export class BarbersService {
   async createBarber(dto: CreateBarberDto) {
     await this.prismaService.barber.create({
       data: {
+        displayName: dto.name,
         phone: dto.phone,
-        user: { connect: { id: dto.userId } },
+        user: { connect: { id: dto.barberId } },
       },
     });
   }

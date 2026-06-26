@@ -28,13 +28,13 @@ export class RegisterUseCase {
   }
 
   async storeUserCredentials(data: RegisterDto): Promise<void> {
-    const hashedPassword = await this.bcryptService.hashPassword(data.password);
+    const hashedPassword = await this.bcryptService.hashInput(data.password);
     const hashedData = { email: data.email, passwordHash: hashedPassword };
     await this.authService.createUser(hashedData);
   }
 
   async sendVerificationEmail(email: string): Promise<void> {
-    const tokens = await this.tokenService.generateTokens(email);
-    await this.authService.sendVerificationEmail(email, tokens.accessToken);
+    const token = await this.tokenService.issueEmailVerificationToken(email);
+    await this.authService.sendVerificationEmail(email, token);
   }
 }

@@ -6,6 +6,10 @@ import {
 import { CreateEmailResponse } from 'resend';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown Resend health error';
+}
+
 @Injectable()
 export class ResendHealthIndicator {
   constructor(
@@ -26,10 +30,10 @@ export class ResendHealthIndicator {
         throw new Error('Failed to send test email via Resend service');
       }
       return this.healthIndicatorService.check(key).up();
-    } catch (err) {
+    } catch (err: unknown) {
       return this.healthIndicatorService
         .check(key)
-        .down({ message: err.message });
+        .down({ message: getErrorMessage(err) });
     }
   }
 }

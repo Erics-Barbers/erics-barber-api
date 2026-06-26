@@ -9,6 +9,9 @@ import { GetBookingDetailsUseCase } from './application/use-cases/get-booking.us
 import { GetBookingsUseCase } from './application/use-cases/get-bookings.use-case';
 import { UpdateBookingUseCase } from './application/use-cases/update-booking.use-case';
 import { CreateBookingUseCase } from './application/use-cases/create-booking.use-case';
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { BookingGuard } from 'src/common/guards/booking.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
 
 @Module({
   imports: [PrismaModule],
@@ -19,6 +22,9 @@ import { CreateBookingUseCase } from './application/use-cases/create-booking.use
     PrismaService,
     ResendService,
     TokenService,
+    AuthGuard,
+    RolesGuard,
+    BookingGuard,
     // Use Cases
     GetBookingDetailsUseCase,
     GetBookingsUseCase,

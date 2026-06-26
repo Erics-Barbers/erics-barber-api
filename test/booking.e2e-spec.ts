@@ -4,11 +4,10 @@ import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { useContainer } from 'class-validator';
-import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
+import { globalValidationPipeOptions } from 'src/config/validation';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
-  let prisma: PrismaService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -16,10 +15,9 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    prisma = app.get<PrismaService>(PrismaService);
 
     useContainer(app.select(AppModule), { fallbackOnErrors: true });
-    app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalPipes(new ValidationPipe(globalValidationPipeOptions));
 
     await app.init();
   });

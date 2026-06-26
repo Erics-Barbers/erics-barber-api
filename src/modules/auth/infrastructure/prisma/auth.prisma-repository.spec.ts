@@ -1,0 +1,217 @@
+import { Role } from 'src/generated/prisma/client';
+import { AuthService } from './auth.prisma-repository';
+import { SessionCreateInput } from 'src/generated/prisma/models/Session';
+import { SessionRevocationReason } from 'src/generated/prisma/enums';
+
+describe('AuthService repository', () => {
+  const originalClientBaseUrl = process.env.CLIENT_BASE_URL;
+  const originalStaffClientBaseUrl = process.env.STAFF_CLIENT_BASE_URL;
+
+  afterEach(() => {
+    restoreEnv('CLIENT_BASE_URL', originalClientBaseUrl);
+    restoreEnv('STAFF_CLIENT_BASE_URL', originalStaffClientBaseUrl);
+  });
+
+  it('deletes only unverified customer users created before the cutoff', async () => {
+    const deleteMany = jest.fn().mockResolvedValue({ count: 2 });
+    const prismaService = {
+      user: {
+        deleteMany,
+      },
+    };
+    const authService = new AuthService(
+      prismaService as never,
+      {} as never,
+      {} as never,
+    );
+    const cutoff = new Date('2026-06-06T02:00:00.000Z');
+
+    await expect(
+      authService.deleteUnverifiedCustomersCreatedBefore(cutoff),
+    ).resolves.toBe(2);
+
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: {
+        isEmailVerified: false,
+        role: Role.CUSTOMER,
+        createdAt: { lt: cutoff },
+      },
+    });
+  });
+
+  it('deletes expired sessions before the reference date', async () => {
+    const deleteMany = jest.fn().mockResolvedValue({ count: 5 });
+    const prismaService = {
+      session: {
+        deleteMany,
+      },
+    };
+    const authService = new AuthService(
+      prismaService as never,
+      {} as never,
+      {} as never,
+    );
+    const referenceDate = new Date('2026-06-13T03:00:00.000Z');
+
+    await expect(
+      authService.deleteExpiredSessions(referenceDate),
+    ).resolves.toBe(5);
+
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: {
+        expiresAt: { lt: referenceDate },
+      },
+    });
+  });
+
+  it('deletes expired MFA challenges before the reference date', async () => {
+    const deleteMany = jest.fn().mockResolvedValue({ count: 3 });
+    const prismaService = {
+      mfaChallenge: {
+        deleteMany,
+      },
+    };
+    const authService = new AuthService(
+      prismaService as never,
+      {} as never,
+      {} as never,
+    );
+    const referenceDate = new Date('2026-06-13T03:00:00.000Z');
+
+    await expect(
+      authService.deleteExpiredMfaChallenges(referenceDate),
+    ).resolves.toBe(3);
+
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: {
+        expiresAt: { lt: referenceDate },
+      },
+    });
+  });
+
+  it('rotates a refresh token session in a transaction', async () => {
+    const updateSession = jest.fn().mockResolvedValue({ id: 'old-session-id' });
+    const createSession = jest.fn().mockResolvedValue({ id: 'new-session-id' });
+    const transaction = jest.fn().mockImplementation(
+      async (
+        callback: (tx: {
+          session: {
+            update: typeof updateSession;
+            create: typeof createSession;
+          };
+        }) => Promise<void>,
+      ) =>
+        callback({
+          session: {
+            update: updateSession,
+            create: createSession,
+          },
+        }),
+    );
+    const prismaService = {
+      $transaction: transaction,
+    };
+    const authService = new AuthService(
+      prismaService as never,
+      {} as never,
+      {} as never,
+    );
+    const newSessionData: SessionCreateInput = {
+      user: { connect: { id: 'user-id' } },
+      refreshToken: 'hashed-new-refresh-token',
+      familyId: 'session-family-id',
+      expiresAt: new Date('2026-06-20T00:00:00.000Z'),
+      userAgent: 'test-agent',
+    };
+
+    await expect(
+      authService.rotateRefreshTokenSession('old-session-id', newSessionData),
+    ).resolves.toBeUndefined();
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(updateSession).toHaveBeenNthCalledWith(1, {
+      where: { id: 'old-session-id' },
+      data: {
+        revokedAt: expect.any(Date) as Date,
+        revokedReason: SessionRevocationReason.ROTATED,
+      },
+    });
+    expect(createSession).toHaveBeenCalledWith({ data: newSessionData });
+    expect(updateSession).toHaveBeenNthCalledWith(2, {
+      where: { id: 'old-session-id' },
+      data: { replacedBySessionId: 'new-session-id' },
+    });
+    expect(updateSession.mock.invocationCallOrder[0]).toBeLessThan(
+      createSession.mock.invocationCallOrder[0],
+    );
+    expect(createSession.mock.invocationCallOrder[0]).toBeLessThan(
+      updateSession.mock.invocationCallOrder[1],
+    );
+  });
+
+  it('revokes active sessions in a refresh token session family', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const prismaService = {
+      session: {
+        updateMany,
+      },
+    };
+    const authService = new AuthService(
+      prismaService as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      authService.revokeRefreshTokenSessionFamily(
+        'session-family-id',
+        SessionRevocationReason.REPLAY_DETECTED,
+      ),
+    ).resolves.toBe(1);
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        familyId: 'session-family-id',
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: expect.any(Date) as Date,
+        revokedReason: SessionRevocationReason.REPLAY_DETECTED,
+      },
+    });
+  });
+
+  it('uses the configured staff base URL for staff password reset emails', async () => {
+    process.env.CLIENT_BASE_URL = 'https://ui.example.test';
+    process.env.STAFF_CLIENT_BASE_URL = 'https://staff.example.test';
+    const sendEmail = jest.fn().mockResolvedValue(undefined);
+    const authService = new AuthService(
+      {} as never,
+      {} as never,
+      { sendEmail } as never,
+    );
+
+    await authService.sendResetPasswordEmail(
+      'barber@example.com',
+      'password-reset-token',
+      'STAFF',
+    );
+
+    expect(sendEmail).toHaveBeenCalledWith(
+      'barber@example.com',
+      'Reset Your Password',
+      expect.stringContaining(
+        'https://staff.example.test/reset-password?token=password-reset-token',
+      ),
+    );
+  });
+});
+
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[name];
+    return;
+  }
+
+  process.env[name] = value;
+}
