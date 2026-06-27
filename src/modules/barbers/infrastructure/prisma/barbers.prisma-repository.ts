@@ -7,7 +7,10 @@ export class BarbersService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async getAllBarbers() {
-    return await this.prismaService.barber.findMany();
+    return await this.prismaService.barber.findMany({
+      where: { isActive: true },
+      orderBy: { displayName: 'asc' },
+    });
   }
 
   async getBarberById(barberId: string) {

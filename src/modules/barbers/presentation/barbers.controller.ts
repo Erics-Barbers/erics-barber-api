@@ -12,6 +12,7 @@ import {
 import { Role } from 'src/common/constants/role.enum';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { AuthGuard } from 'src/common/guards/auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
 import { CreateBarberUseCase } from '../application/use-cases/create-barber.use-case';
 import { DeleteBarberUseCase } from '../application/use-cases/delete-barber.use-case';
 import { GetBarberUseCase } from '../application/use-cases/get-barber.use-case';
@@ -22,7 +23,7 @@ import { UpdateBarberUseCase } from '../application/use-cases/update-barber.use-
 import { DeleteBarberDto } from './dto/delete-barber.dto';
 import { UpdateBarberDto } from './dto/update-barber.dto';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Controller('barbers')
 export class BarbersController {
   constructor(

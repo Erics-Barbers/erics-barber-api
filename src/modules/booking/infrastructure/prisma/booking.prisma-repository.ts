@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Role } from 'src/common/constants/role.enum';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
@@ -21,7 +25,7 @@ export class BookingService {
   async createBooking(userId: string, dto: CreateBookingDto) {
     // Check new booking time is not in the past
     if (dto.appointmentDate < new Date()) {
-      throw new Error('Cannot create booking in the past');
+      throw new BadRequestException('Cannot create booking in the past');
     }
 
     await this.availabilityService.assertSlotAvailable({
@@ -34,7 +38,16 @@ export class BookingService {
       dto.appointmentDate.getTime() + BOOKING_SLOT_MINUTES * 60 * 1000,
     );
 
-    await this.prismaService.booking.create({
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const booking = await this.prismaService.booking.create({
       data: {
         userId,
         serviceId: dto.serviceId,
@@ -43,13 +56,19 @@ export class BookingService {
         startTime: dto.appointmentDate,
         endTime: appointmentEndTime,
       },
+      include: {
+        service: true,
+        barber: true,
+      },
     });
 
     await this.resendService.sendEmail(
-      '',
+      user.email,
       'Booking Confirmation',
       `<p>Your booking for ${dto.appointmentDate.toISOString()} has been confirmed.</p>`,
     );
+
+    return booking;
   }
 
   async updateBooking(
@@ -69,18 +88,18 @@ export class BookingService {
 
     // Check new booking time is not in the past
     if (dto.appointmentDate && dto.appointmentDate < new Date()) {
-      throw new Error('Cannot update booking to a past date');
+      throw new BadRequestException('Cannot update booking to a past date');
     }
 
     const barberId = dto.barberId ?? booking.barberId;
     const serviceId = dto.serviceId ?? booking.serviceId;
 
     if (!barberId) {
-      throw new Error('Barber not found');
+      throw new NotFoundException('Barber not found');
     }
 
     if (!serviceId) {
-      throw new Error('Service not found');
+      throw new NotFoundException('Service not found');
     }
 
     const appointmentStartTime = dto.appointmentDate ?? booking.startTime;

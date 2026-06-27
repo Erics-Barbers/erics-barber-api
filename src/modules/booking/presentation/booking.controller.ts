@@ -66,8 +66,8 @@ export class BookingController {
     @CurrentUser() userId: string,
     @Body() dto: CreateBookingDto,
   ) {
-    await this.createBookingUseCase.execute(userId, dto);
-    return { message: 'Booking created successfully' };
+    const booking = await this.createBookingUseCase.execute(userId, dto);
+    return { message: 'Booking created successfully', booking };
   }
 
   @Patch(':id')

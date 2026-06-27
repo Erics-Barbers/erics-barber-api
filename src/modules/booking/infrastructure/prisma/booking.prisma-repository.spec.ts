@@ -15,6 +15,9 @@ describe('BookingService', () => {
   };
 
   const createPrismaService = () => ({
+    user: {
+      findUnique: jest.fn(),
+    },
     barber: {
       findUnique: jest.fn(),
     },
@@ -31,7 +34,18 @@ describe('BookingService', () => {
 
   it('creates 30-minute bookings for the selected barber', async () => {
     const prismaService = createPrismaService();
-    prismaService.booking.create.mockResolvedValue({});
+    const createdBooking = {
+      id: 'booking-id',
+      serviceId: 'service-id',
+      barberId: 'barber-id',
+      status: BookingStatus.CONFIRMED,
+      service: { id: 'service-id' },
+      barber: { id: 'barber-id' },
+    };
+    prismaService.user.findUnique.mockResolvedValue({
+      email: 'customer@example.com',
+    });
+    prismaService.booking.create.mockResolvedValue(createdBooking);
     resendService.sendEmail.mockResolvedValue(undefined);
     availabilityService.assertSlotAvailable.mockResolvedValue(undefined);
 
@@ -42,7 +56,7 @@ describe('BookingService', () => {
     );
     const appointmentDate = new Date('2026-07-01T10:00:00.000Z');
 
-    await bookingService.createBooking('customer-id', {
+    const result = await bookingService.createBooking('customer-id', {
       serviceId: 'service-id',
       barberId: 'barber-id',
       appointmentDate,
@@ -62,7 +76,17 @@ describe('BookingService', () => {
         startTime: appointmentDate,
         endTime: new Date('2026-07-01T10:30:00.000Z'),
       },
+      include: {
+        service: true,
+        barber: true,
+      },
     });
+    expect(resendService.sendEmail).toHaveBeenCalledWith(
+      'customer@example.com',
+      'Booking Confirmation',
+      '<p>Your booking for 2026-07-01T10:00:00.000Z has been confirmed.</p>',
+    );
+    expect(result).toBe(createdBooking);
   });
 
   it('rejects bookings that do not start on a half-hour boundary', async () => {

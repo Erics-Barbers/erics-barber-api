@@ -64,19 +64,24 @@ describe('BookingController', () => {
   });
 
   it('uses the authenticated user when creating a booking', async () => {
-    createBookingUseCase.execute.mockResolvedValue(undefined);
+    const booking = { id: 'booking-id', status: 'CONFIRMED' };
+    createBookingUseCase.execute.mockResolvedValue(booking);
     const dto = {
       serviceId: 'service-id',
       barberId: 'barber-id',
       appointmentDate: new Date('2026-07-01T10:00:00.000Z'),
     };
 
-    await controller.createBooking('customer-id', dto);
+    const result = await controller.createBooking('customer-id', dto);
 
     expect(createBookingUseCase.execute).toHaveBeenCalledWith(
       'customer-id',
       dto,
     );
+    expect(result).toEqual({
+      message: 'Booking created successfully',
+      booking,
+    });
   });
 
   it('uses the authenticated user and role when reading booking details', async () => {

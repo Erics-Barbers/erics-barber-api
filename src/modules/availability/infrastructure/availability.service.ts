@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   AvailabilityExceptionType,
   BookingStatus,
@@ -129,7 +134,9 @@ export class AvailabilityService {
     await this.assertActiveThirtyMinuteService(options.serviceId);
 
     if (!this.isHalfHourAligned(options.startTime)) {
-      throw new Error('Booking start time must be on the hour or half hour');
+      throw new BadRequestException(
+        'Booking start time must be on the hour or half hour',
+      );
     }
 
     const date = this.getLocalDateString(options.startTime);
@@ -137,7 +144,7 @@ export class AvailabilityService {
     const endMinute = startMinute + SLOT_MINUTES;
 
     if (endMinute > 1440) {
-      throw new Error('Booking time is not available');
+      throw new BadRequestException('Booking time is not available');
     }
 
     const slots = await this.getAvailableSlots({
@@ -151,7 +158,7 @@ export class AvailabilityService {
     );
 
     if (!requestedSlot && !options.excludeBookingId) {
-      throw new Error('Booking time is not available');
+      throw new ConflictException('Booking time is not available');
     }
 
     if (!requestedSlot && options.excludeBookingId) {
@@ -177,7 +184,7 @@ export class AvailabilityService {
     });
 
     if (existingBooking) {
-      throw new Error('Booking time is not available');
+      throw new ConflictException('Booking time is not available');
     }
   }
 
@@ -219,7 +226,7 @@ export class AvailabilityService {
     );
 
     if (!isInsideAvailability) {
-      throw new Error('Booking time is not available');
+      throw new ConflictException('Booking time is not available');
     }
   }
 
@@ -229,7 +236,7 @@ export class AvailabilityService {
     });
 
     if (!barber) {
-      throw new Error('Barber not found');
+      throw new NotFoundException('Barber not found');
     }
   }
 
@@ -239,11 +246,11 @@ export class AvailabilityService {
     });
 
     if (!service) {
-      throw new Error('Service not found');
+      throw new NotFoundException('Service not found');
     }
 
     if (service.durationMinutes !== SLOT_MINUTES) {
-      throw new Error('Service duration must be 30 minutes');
+      throw new BadRequestException('Service duration must be 30 minutes');
     }
   }
 
