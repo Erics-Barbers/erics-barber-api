@@ -7,6 +7,10 @@ export class UpdateBookingDto {
   readonly serviceId?: string;
 
   @IsOptional()
+  @IsString()
+  readonly barberId?: string;
+
+  @IsOptional()
   @Type(() => Date)
   @IsDate()
   readonly appointmentDate?: Date;

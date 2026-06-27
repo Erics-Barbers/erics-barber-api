@@ -41,9 +41,11 @@ model Barber {
   deactivatedAt DateTime?
 
   // Relations
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessions Session[]
-  bookings Booking[]
+  user                   User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions               Session[]
+  bookings               Booking[]
+  availabilityRules      BarberAvailabilityRule[]
+  availabilityExceptions BarberAvailabilityException[]
 }
 
 model ExternalAccount {
@@ -120,6 +122,37 @@ model Booking {
   @@index([serviceId])
 }
 
+model BarberAvailabilityRule {
+  id          String    @id @default(cuid())
+  barberId    String
+  dayOfWeek   DayOfWeek
+  startMinute Int
+  endMinute   Int
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  barber Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@unique([barberId, dayOfWeek, startMinute, endMinute])
+  @@index([barberId, dayOfWeek])
+}
+
+model BarberAvailabilityException {
+  id          String                    @id @default(cuid())
+  barberId    String
+  date        DateTime
+  startMinute Int?
+  endMinute   Int?
+  type        AvailabilityExceptionType
+  reason      String?
+  createdAt   DateTime                  @default(now())
+
+  barber Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([barberId, date])
+}
+
 model Service {
   id              String   @id @default(cuid())
   name            String   @unique
@@ -141,6 +174,21 @@ enum Role {
 
 enum MfaMethod {
   EMAIL
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum AvailabilityExceptionType {
+  UNAVAILABLE
+  AVAILABLE
 }
 
 enum SessionRevocationReason {

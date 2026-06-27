@@ -58,6 +58,7 @@ describe('globalValidationPipeOptions', () => {
       {
         userId: 'customer-id',
         serviceId: 'service-id',
+        barberId: 'barber-id',
         appointmentDate: '2026-07-01T10:00:00.000Z',
       },
       metadata,

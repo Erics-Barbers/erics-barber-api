@@ -8,6 +8,9 @@ export class CreateBookingDto {
   @IsString()
   readonly serviceId!: string;
 
+  @IsString()
+  readonly barberId!: string;
+
   @Type(() => Date)
   @IsDate()
   readonly appointmentDate!: Date;
