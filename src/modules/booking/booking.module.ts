@@ -12,9 +12,10 @@ import { CreateBookingUseCase } from './application/use-cases/create-booking.use
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { BookingGuard } from 'src/common/guards/booking.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
+import { AvailabilityModule } from '../availability/availability.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AvailabilityModule],
   controllers: [BookingController],
   providers: [
     // Services

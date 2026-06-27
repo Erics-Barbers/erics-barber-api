@@ -9,6 +9,7 @@ import { AppService } from './app.service';
 import { BarbersModule } from './modules/barbers/barbers.module';
 import { HealthModule } from './modules/health/health.module';
 import { ServicesModule } from './modules/services/services.module';
+import { AvailabilityModule } from './modules/availability/availability.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { RequestLoggingMiddleware } from './common/middleware/request-logging.middleware';
 import { APP_GUARD } from '@nestjs/core';
@@ -18,6 +19,7 @@ import { ScheduleModule } from '@nestjs/schedule';
   imports: [
     AuthModule,
     BarbersModule,
+    AvailabilityModule,
     BookingModule,
     ConfigModule,
     HealthModule,

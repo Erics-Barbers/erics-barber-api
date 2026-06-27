@@ -4,6 +4,8 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { CreateBookingDto } from '../../presentation/dto/create-booking.dto';
 import { UpdateBookingDto } from '../../presentation/dto/update-booking.dto';
 import { GetBookingsQueryDto } from '../../presentation/dto/get-booking.dto';
+import { AvailabilityService } from 'src/modules/availability/infrastructure/availability.service';
+import { BookingStatus } from 'src/generated/prisma/enums';
 
 const BOOKING_SLOT_MINUTES = 30;
 
@@ -12,60 +14,31 @@ export class BookingService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly resendService: ResendService,
+    private readonly availabilityService: AvailabilityService,
   ) {}
 
   async createBooking(dto: CreateBookingDto) {
-    const service = await this.prismaService.service.findFirst({
-      where: { id: dto.serviceId, isActive: true },
-    });
-
-    if (!service) {
-      throw new Error('Service not found');
-    }
-
-    if (service.durationMinutes !== BOOKING_SLOT_MINUTES) {
-      throw new Error('Service duration must be 30 minutes');
-    }
-
-    const barber = await this.prismaService.barber.findFirst({
-      where: { id: dto.barberId, isActive: true },
-    });
-
-    if (!barber) {
-      throw new Error('Barber not found');
-    }
-
     // Check new booking time is not in the past
     if (dto.appointmentDate < new Date()) {
       throw new Error('Cannot create booking in the past');
     }
 
-    if (!this.isHalfHourAligned(dto.appointmentDate)) {
-      throw new Error('Booking start time must be on the hour or half hour');
-    }
+    await this.availabilityService.assertSlotAvailable({
+      barberId: dto.barberId,
+      serviceId: dto.serviceId,
+      startTime: dto.appointmentDate,
+    });
 
     const appointmentEndTime = new Date(
       dto.appointmentDate.getTime() + BOOKING_SLOT_MINUTES * 60 * 1000,
     );
 
-    // Check booking time is available
-    const existingBooking = await this.prismaService.booking.findFirst({
-      where: {
-        barberId: barber.id,
-        startTime: { lt: appointmentEndTime },
-        endTime: { gt: dto.appointmentDate },
-      },
-    });
-
-    if (existingBooking) {
-      throw new Error('Booking time is not available');
-    }
-
     await this.prismaService.booking.create({
       data: {
         userId: dto.userId,
-        serviceId: service.id,
-        barberId: barber.id,
+        serviceId: dto.serviceId,
+        barberId: dto.barberId,
+        status: BookingStatus.CONFIRMED,
         startTime: dto.appointmentDate,
         endTime: appointmentEndTime,
       },
@@ -93,38 +66,18 @@ export class BookingService {
       throw new Error('Cannot update booking to a past date');
     }
 
-    const serviceId = dto.serviceId ?? booking.serviceId;
-    const service = serviceId
-      ? await this.prismaService.service.findFirst({
-          where: { id: serviceId, isActive: true },
-        })
-      : null;
-
-    if (dto.serviceId && !service) {
-      throw new Error('Service not found');
-    }
-
-    if (service && service.durationMinutes !== BOOKING_SLOT_MINUTES) {
-      throw new Error('Service duration must be 30 minutes');
-    }
-
     const barberId = dto.barberId ?? booking.barberId;
-    const barber = barberId
-      ? await this.prismaService.barber.findFirst({
-          where: { id: barberId, isActive: true },
-        })
-      : null;
+    const serviceId = dto.serviceId ?? booking.serviceId;
 
-    if (!barber) {
+    if (!barberId) {
       throw new Error('Barber not found');
     }
 
-    const appointmentStartTime = dto.appointmentDate ?? booking.startTime;
-
-    if (!this.isHalfHourAligned(appointmentStartTime)) {
-      throw new Error('Booking start time must be on the hour or half hour');
+    if (!serviceId) {
+      throw new Error('Service not found');
     }
 
+    const appointmentStartTime = dto.appointmentDate ?? booking.startTime;
     const appointmentEndTime =
       dto.appointmentDate || dto.serviceId
         ? new Date(
@@ -134,18 +87,12 @@ export class BookingService {
 
     // Check booking time is available
     if (dto.appointmentDate || dto.serviceId || dto.barberId) {
-      const existingBooking = await this.prismaService.booking.findFirst({
-        where: {
-          barberId: barber.id,
-          startTime: { lt: appointmentEndTime ?? booking.endTime },
-          endTime: { gt: appointmentStartTime },
-          NOT: { id: bookingId },
-        },
+      await this.availabilityService.assertSlotAvailable({
+        barberId,
+        serviceId,
+        startTime: appointmentStartTime,
+        excludeBookingId: bookingId,
       });
-
-      if (existingBooking) {
-        throw new Error('Booking time is not available');
-      }
     }
 
     // Update booking details
@@ -156,6 +103,7 @@ export class BookingService {
       data: {
         serviceId: dto.serviceId,
         barberId: dto.barberId,
+        status: dto.status,
         startTime: dto.appointmentDate,
         endTime: appointmentEndTime,
       },
@@ -199,13 +147,5 @@ export class BookingService {
       return userBookings.slice(startIndex, endIndex);
     }
     return userBookings;
-  }
-
-  private isHalfHourAligned(date: Date) {
-    return (
-      (date.getUTCMinutes() === 0 || date.getUTCMinutes() === 30) &&
-      date.getUTCSeconds() === 0 &&
-      date.getUTCMilliseconds() === 0
-    );
   }
 }
