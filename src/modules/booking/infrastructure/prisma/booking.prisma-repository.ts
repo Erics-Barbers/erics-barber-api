@@ -13,15 +13,28 @@ export class BookingService {
   ) {}
 
   async createBooking(dto: CreateBookingDto) {
+    const service = await this.prismaService.service.findFirst({
+      where: { id: dto.serviceId, isActive: true },
+    });
+
+    if (!service) {
+      throw new Error('Service not found');
+    }
+
     // Check new booking time is not in the past
     if (dto.appointmentDate < new Date()) {
       throw new Error('Cannot create booking in the past');
     }
 
+    const appointmentEndTime = new Date(
+      dto.appointmentDate.getTime() + service.durationMinutes * 60 * 1000,
+    );
+
     // Check booking time is available
     const existingBooking = await this.prismaService.booking.findFirst({
       where: {
-        startTime: dto.appointmentDate,
+        startTime: { lt: appointmentEndTime },
+        endTime: { gt: dto.appointmentDate },
       },
     });
 
@@ -32,8 +45,9 @@ export class BookingService {
     await this.prismaService.booking.create({
       data: {
         userId: dto.userId,
+        serviceId: service.id,
         startTime: dto.appointmentDate,
-        endTime: new Date(dto.appointmentDate.getTime() + 60 * 60 * 1000),
+        endTime: appointmentEndTime,
       },
     });
 
@@ -48,6 +62,7 @@ export class BookingService {
     // Check if booking exists
     const booking = await this.prismaService.booking.findUnique({
       where: { id: bookingId },
+      include: { service: true },
     });
     if (!booking) {
       throw new Error('Booking not found');
@@ -58,11 +73,32 @@ export class BookingService {
       throw new Error('Cannot update booking to a past date');
     }
 
+    const serviceId = dto.serviceId ?? booking.serviceId;
+    const service = serviceId
+      ? await this.prismaService.service.findFirst({
+          where: { id: serviceId, isActive: true },
+        })
+      : null;
+
+    if (dto.serviceId && !service) {
+      throw new Error('Service not found');
+    }
+
+    const appointmentStartTime = dto.appointmentDate ?? booking.startTime;
+    const appointmentEndTime = service
+      ? new Date(
+          appointmentStartTime.getTime() + service.durationMinutes * 60 * 1000,
+        )
+      : dto.appointmentDate
+        ? booking.endTime
+        : undefined;
+
     // Check booking time is available
-    if (dto.appointmentDate) {
+    if (dto.appointmentDate || dto.serviceId) {
       const existingBooking = await this.prismaService.booking.findFirst({
         where: {
-          startTime: dto.appointmentDate,
+          startTime: { lt: appointmentEndTime ?? booking.endTime },
+          endTime: { gt: appointmentStartTime },
           NOT: { id: bookingId },
         },
       });
@@ -78,10 +114,9 @@ export class BookingService {
         id: bookingId,
       },
       data: {
+        serviceId: dto.serviceId,
         startTime: dto.appointmentDate,
-        endTime: dto.appointmentDate
-          ? new Date(dto.appointmentDate.getTime() + 60 * 60 * 1000)
-          : undefined,
+        endTime: appointmentEndTime,
       },
     });
 
@@ -100,6 +135,7 @@ export class BookingService {
       where: {
         id: bookingId,
       },
+      include: { service: true },
     });
   }
 
@@ -110,6 +146,8 @@ export class BookingService {
       where: {
         userId: query.userId,
       },
+      include: { service: true },
+      orderBy: { startTime: 'asc' },
     });
 
     if (query.page) {
