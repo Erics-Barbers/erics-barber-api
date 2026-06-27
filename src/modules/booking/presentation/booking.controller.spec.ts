@@ -11,15 +11,20 @@ import { UpdateBookingUseCase } from '../application/use-cases/update-booking.us
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { BookingGuard } from 'src/common/guards/booking.guard';
+import { Role } from 'src/common/constants/role.enum';
 
 describe('BookingController', () => {
   let controller: BookingController;
   let getBookingsUseCase: { execute: jest.Mock };
+  let getBookingDetailsUseCase: { execute: jest.Mock };
   let createBookingUseCase: { execute: jest.Mock };
+  let updateBookingUseCase: { execute: jest.Mock; cancel: jest.Mock };
 
   beforeEach(async () => {
     getBookingsUseCase = { execute: jest.fn() };
+    getBookingDetailsUseCase = { execute: jest.fn() };
     createBookingUseCase = { execute: jest.fn() };
+    updateBookingUseCase = { execute: jest.fn(), cancel: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BookingController],
@@ -27,10 +32,10 @@ describe('BookingController', () => {
         { provide: GetBookingsUseCase, useValue: getBookingsUseCase },
         {
           provide: GetBookingDetailsUseCase,
-          useValue: { execute: jest.fn() },
+          useValue: getBookingDetailsUseCase,
         },
         { provide: CreateBookingUseCase, useValue: createBookingUseCase },
-        { provide: UpdateBookingUseCase, useValue: { execute: jest.fn() } },
+        { provide: UpdateBookingUseCase, useValue: updateBookingUseCase },
       ],
     })
       .overrideGuard(AuthGuard)
@@ -71,6 +76,55 @@ describe('BookingController', () => {
     expect(createBookingUseCase.execute).toHaveBeenCalledWith(
       'customer-id',
       dto,
+    );
+  });
+
+  it('uses the authenticated user and role when reading booking details', async () => {
+    getBookingDetailsUseCase.execute.mockResolvedValue({ id: 'booking-id' });
+
+    await controller.getBookingDetails(
+      'customer-id',
+      Role.Customer,
+      'booking-id',
+    );
+
+    expect(getBookingDetailsUseCase.execute).toHaveBeenCalledWith(
+      'booking-id',
+      'customer-id',
+      Role.Customer,
+    );
+  });
+
+  it('uses the authenticated user and role when updating a booking', async () => {
+    updateBookingUseCase.execute.mockResolvedValue(undefined);
+    const dto = {
+      appointmentDate: new Date('2026-07-01T10:30:00.000Z'),
+    };
+
+    await controller.updateBooking(
+      'customer-id',
+      Role.Customer,
+      'booking-id',
+      dto,
+    );
+
+    expect(updateBookingUseCase.execute).toHaveBeenCalledWith(
+      'booking-id',
+      'customer-id',
+      Role.Customer,
+      dto,
+    );
+  });
+
+  it('cancels bookings through the dedicated cancel use case path', async () => {
+    updateBookingUseCase.cancel.mockResolvedValue(undefined);
+
+    await controller.cancelBooking('customer-id', Role.Customer, 'booking-id');
+
+    expect(updateBookingUseCase.cancel).toHaveBeenCalledWith(
+      'booking-id',
+      'customer-id',
+      Role.Customer,
     );
   });
 });

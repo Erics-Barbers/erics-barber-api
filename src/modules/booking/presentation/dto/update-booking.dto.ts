@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsDate, IsEnum, IsOptional, IsString } from 'class-validator';
-import { BookingStatus } from 'src/generated/prisma/enums';
+import { IsDate, IsOptional, IsString } from 'class-validator';
 
 export class UpdateBookingDto {
   @IsOptional()
@@ -10,10 +9,6 @@ export class UpdateBookingDto {
   @IsOptional()
   @IsString()
   readonly barberId?: string;
-
-  @IsOptional()
-  @IsEnum(BookingStatus)
-  readonly status?: BookingStatus;
 
   @IsOptional()
   @Type(() => Date)

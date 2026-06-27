@@ -20,7 +20,10 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/constants/role.enum';
 import { BookingGuard } from 'src/common/guards/booking.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  CurrentUserRole,
+} from 'src/common/decorators/current-user.decorator';
 
 @UseGuards(AuthGuard, RolesGuard, BookingGuard)
 @Controller('booking')
@@ -44,9 +47,16 @@ export class BookingController {
 
   @Get(':id')
   @Roles(Role.Admin, Role.Customer, Role.Barber)
-  async getBookingDetails(@Param('id') bookingId: string) {
-    const bookingDetails =
-      await this.getBookingDetailsUseCase.execute(bookingId);
+  async getBookingDetails(
+    @CurrentUser() userId: string,
+    @CurrentUserRole() role: Role,
+    @Param('id') bookingId: string,
+  ) {
+    const bookingDetails = await this.getBookingDetailsUseCase.execute(
+      bookingId,
+      userId,
+      role,
+    );
     return bookingDetails;
   }
 
@@ -62,8 +72,24 @@ export class BookingController {
 
   @Patch(':id')
   @Roles(Role.Admin, Role.Customer)
-  async updateBooking(@Param('id') id: string, @Body() dto: UpdateBookingDto) {
-    await this.updateBookingUseCase.execute(id, dto);
+  async updateBooking(
+    @CurrentUser() userId: string,
+    @CurrentUserRole() role: Role,
+    @Param('id') id: string,
+    @Body() dto: UpdateBookingDto,
+  ) {
+    await this.updateBookingUseCase.execute(id, userId, role, dto);
     return { message: 'Booking updated successfully' };
+  }
+
+  @Patch(':id/cancel')
+  @Roles(Role.Admin, Role.Customer)
+  async cancelBooking(
+    @CurrentUser() userId: string,
+    @CurrentUserRole() role: Role,
+    @Param('id') id: string,
+  ) {
+    await this.updateBookingUseCase.cancel(id, userId, role);
+    return { message: 'Booking cancelled successfully' };
   }
 }

@@ -19,3 +19,13 @@ export const CurrentUser = createParamDecorator(
     return req.user.sub;
   },
 );
+
+export const CurrentUserRole = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext) => {
+    const req = ctx.switchToHttp().getRequest<Request>();
+    if (!req.user?.role) {
+      throw new UnauthorizedException('User role not found in token');
+    }
+    return req.user.role;
+  },
+);

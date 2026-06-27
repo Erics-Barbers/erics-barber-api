@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Role } from 'src/common/constants/role.enum';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { CreateBookingDto } from '../../presentation/dto/create-booking.dto';
@@ -51,14 +52,19 @@ export class BookingService {
     );
   }
 
-  async updateBooking(bookingId: string, dto: UpdateBookingDto) {
-    // Check if booking exists
-    const booking = await this.prismaService.booking.findUnique({
-      where: { id: bookingId },
+  async updateBooking(
+    bookingId: string,
+    userId: string,
+    role: Role,
+    dto: UpdateBookingDto,
+  ) {
+    const booking = await this.prismaService.booking.findFirst({
+      where: await this.getBookingAccessWhere(bookingId, userId, role),
       include: { service: true },
     });
+
     if (!booking) {
-      throw new Error('Booking not found');
+      throw new NotFoundException('Booking not found');
     }
 
     // Check new booking time is not in the past
@@ -103,7 +109,6 @@ export class BookingService {
       data: {
         serviceId: dto.serviceId,
         barberId: dto.barberId,
-        status: dto.status,
         startTime: dto.appointmentDate,
         endTime: appointmentEndTime,
       },
@@ -116,16 +121,32 @@ export class BookingService {
     );
   }
 
-  async getBookingDetails(bookingId: string) {
-    // Determine if requester is allowed to access this booking
-    // Customer or Barber can only access their own bookings
+  async cancelBooking(bookingId: string, userId: string, role: Role) {
+    const booking = await this.prismaService.booking.findFirst({
+      where: await this.getBookingAccessWhere(bookingId, userId, role),
+    });
 
-    return await this.prismaService.booking.findUnique({
-      where: {
-        id: bookingId,
-      },
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    await this.prismaService.booking.update({
+      where: { id: bookingId },
+      data: { status: BookingStatus.CANCELLED },
+    });
+  }
+
+  async getBookingDetails(bookingId: string, userId: string, role: Role) {
+    const booking = await this.prismaService.booking.findFirst({
+      where: await this.getBookingAccessWhere(bookingId, userId, role),
       include: { service: true },
     });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    return booking;
   }
 
   async getBookings(userId: string, query: GetBookingsQueryDto) {
@@ -145,5 +166,32 @@ export class BookingService {
       return userBookings.slice(startIndex, endIndex);
     }
     return userBookings;
+  }
+
+  private async getBookingAccessWhere(
+    bookingId: string,
+    userId: string,
+    role: Role,
+  ) {
+    if (role === Role.Admin) {
+      return { id: bookingId };
+    }
+
+    if (role === Role.Barber) {
+      const barber = await this.prismaService.barber.findUnique({
+        where: { userId },
+        select: { id: true },
+      });
+
+      return {
+        id: bookingId,
+        barberId: barber?.id ?? '__missing_barber_profile__',
+      };
+    }
+
+    return {
+      id: bookingId,
+      userId,
+    };
   }
 }

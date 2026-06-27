@@ -4,6 +4,7 @@ jest.mock('src/infrastructure/mail/resend.service', () => ({
 
 import { BookingService } from './booking.prisma-repository';
 import { BookingStatus } from 'src/generated/prisma/enums';
+import { Role } from 'src/common/constants/role.enum';
 
 describe('BookingService', () => {
   const resendService = {
@@ -14,8 +15,13 @@ describe('BookingService', () => {
   };
 
   const createPrismaService = () => ({
+    barber: {
+      findUnique: jest.fn(),
+    },
     booking: {
       create: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
     },
   });
 
@@ -78,5 +84,57 @@ describe('BookingService', () => {
         appointmentDate: new Date('2026-07-01T10:15:00.000Z'),
       }),
     ).rejects.toThrow('Booking start time must be on the hour or half hour');
+  });
+
+  it('scopes customer booking details to the authenticated user', async () => {
+    const prismaService = createPrismaService();
+    prismaService.booking.findFirst.mockResolvedValue({ id: 'booking-id' });
+    const bookingService = new BookingService(
+      prismaService as never,
+      resendService as never,
+      availabilityService as never,
+    );
+
+    await bookingService.getBookingDetails(
+      'booking-id',
+      'customer-id',
+      Role.Customer,
+    );
+
+    expect(prismaService.booking.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'booking-id',
+        userId: 'customer-id',
+      },
+      include: { service: true },
+    });
+  });
+
+  it('cancels an accessible customer booking through a dedicated status update', async () => {
+    const prismaService = createPrismaService();
+    prismaService.booking.findFirst.mockResolvedValue({ id: 'booking-id' });
+    prismaService.booking.update.mockResolvedValue({});
+    const bookingService = new BookingService(
+      prismaService as never,
+      resendService as never,
+      availabilityService as never,
+    );
+
+    await bookingService.cancelBooking(
+      'booking-id',
+      'customer-id',
+      Role.Customer,
+    );
+
+    expect(prismaService.booking.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'booking-id',
+        userId: 'customer-id',
+      },
+    });
+    expect(prismaService.booking.update).toHaveBeenCalledWith({
+      where: { id: 'booking-id' },
+      data: { status: BookingStatus.CANCELLED },
+    });
   });
 });
