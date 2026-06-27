@@ -36,8 +36,7 @@ describe('BookingService', () => {
     );
     const appointmentDate = new Date('2026-07-01T10:00:00.000Z');
 
-    await bookingService.createBooking({
-      userId: 'customer-id',
+    await bookingService.createBooking('customer-id', {
       serviceId: 'service-id',
       barberId: 'barber-id',
       appointmentDate,
@@ -73,8 +72,7 @@ describe('BookingService', () => {
     );
 
     await expect(
-      bookingService.createBooking({
-        userId: 'customer-id',
+      bookingService.createBooking('customer-id', {
         serviceId: 'service-id',
         barberId: 'barber-id',
         appointmentDate: new Date('2026-07-01T10:15:00.000Z'),

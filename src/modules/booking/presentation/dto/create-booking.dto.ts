@@ -3,9 +3,6 @@ import { IsDate, IsOptional, IsString } from 'class-validator';
 
 export class CreateBookingDto {
   @IsString()
-  readonly userId!: string;
-
-  @IsString()
   readonly serviceId!: string;
 
   @IsString()

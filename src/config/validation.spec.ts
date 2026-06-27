@@ -37,7 +37,6 @@ describe('globalValidationPipeOptions', () => {
 
     const result = (await pipe.transform(
       {
-        userId: 'customer-id',
         page: '2',
         limit: '25',
       },
@@ -56,7 +55,6 @@ describe('globalValidationPipeOptions', () => {
 
     const result = (await pipe.transform(
       {
-        userId: 'customer-id',
         serviceId: 'service-id',
         barberId: 'barber-id',
         appointmentDate: '2026-07-01T10:00:00.000Z',

@@ -20,6 +20,7 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/constants/role.enum';
 import { BookingGuard } from 'src/common/guards/booking.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 
 @UseGuards(AuthGuard, RolesGuard, BookingGuard)
 @Controller('booking')
@@ -33,8 +34,11 @@ export class BookingController {
 
   @Get('')
   @Roles(Role.Admin, Role.Customer)
-  async getBookings(@Query() query: GetBookingsQueryDto) {
-    const bookings = await this.getBookingsUseCase.execute(query);
+  async getBookings(
+    @CurrentUser() userId: string,
+    @Query() query: GetBookingsQueryDto,
+  ) {
+    const bookings = await this.getBookingsUseCase.execute(userId, query);
     return bookings;
   }
 
@@ -48,8 +52,11 @@ export class BookingController {
 
   @Post('')
   @Roles(Role.Admin, Role.Customer)
-  async createBooking(@Body() dto: CreateBookingDto) {
-    await this.createBookingUseCase.execute(dto);
+  async createBooking(
+    @CurrentUser() userId: string,
+    @Body() dto: CreateBookingDto,
+  ) {
+    await this.createBookingUseCase.execute(userId, dto);
     return { message: 'Booking created successfully' };
   }
 

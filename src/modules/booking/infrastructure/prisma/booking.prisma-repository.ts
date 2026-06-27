@@ -17,7 +17,7 @@ export class BookingService {
     private readonly availabilityService: AvailabilityService,
   ) {}
 
-  async createBooking(dto: CreateBookingDto) {
+  async createBooking(userId: string, dto: CreateBookingDto) {
     // Check new booking time is not in the past
     if (dto.appointmentDate < new Date()) {
       throw new Error('Cannot create booking in the past');
@@ -35,7 +35,7 @@ export class BookingService {
 
     await this.prismaService.booking.create({
       data: {
-        userId: dto.userId,
+        userId,
         serviceId: dto.serviceId,
         barberId: dto.barberId,
         status: BookingStatus.CONFIRMED,
@@ -128,12 +128,10 @@ export class BookingService {
     });
   }
 
-  async getBookings(query: GetBookingsQueryDto) {
-    // Check userId matches logged in user
-
+  async getBookings(userId: string, query: GetBookingsQueryDto) {
     const userBookings = await this.prismaService.booking.findMany({
       where: {
-        userId: query.userId,
+        userId,
       },
       include: { service: true },
       orderBy: { startTime: 'asc' },
