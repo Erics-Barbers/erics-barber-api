@@ -19,6 +19,8 @@ import { VerifyMfaUseCase } from '../../application/use-cases/verify-mfa.use-cas
 import { MfaMethod } from 'src/generated/prisma/client';
 import { UpdateMfaPreferenceUseCase } from '../../application/use-cases/update-mfa-preference.use-case';
 import { Request, Response } from 'express';
+import { DeleteAccountUseCase } from '../../application/use-cases/delete-account.use-case';
+import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 
 type MockResponse = jest.Mocked<Pick<Response, 'cookie' | 'clearCookie'>>;
 
@@ -41,6 +43,12 @@ describe('AuthController', () => {
   const mockSendVerificationEmailUseCase = { execute: jest.fn() };
   const mockRefreshTokenUseCase = { execute: jest.fn() };
   const mockUpdateMfaPreferenceUseCase = { execute: jest.fn() };
+  const mockDeleteAccountUseCase = { execute: jest.fn() };
+  const mockPrismaService = {
+    user: {
+      findFirst: jest.fn(),
+    },
+  };
   const mockResponse: MockResponse = {
     cookie: jest.fn(),
     clearCookie: jest.fn(),
@@ -51,6 +59,7 @@ describe('AuthController', () => {
       controllers: [AuthController],
       providers: [
         { provide: TokenService, useValue: tokenService },
+        { provide: PrismaService, useValue: mockPrismaService },
         { provide: RegisterUseCase, useValue: mockRegisterUseCase },
         { provide: VerifyEmailUseCase, useValue: mockVerifyEmailUseCase },
         { provide: LoginUseCase, useValue: mockLoginUseCase },
@@ -72,6 +81,7 @@ describe('AuthController', () => {
           provide: UpdateMfaPreferenceUseCase,
           useValue: mockUpdateMfaPreferenceUseCase,
         },
+        { provide: DeleteAccountUseCase, useValue: mockDeleteAccountUseCase },
       ],
     }).compile();
 
@@ -81,6 +91,7 @@ describe('AuthController', () => {
 
   it('auth/register should return a message and 200 status code', () => {
     const dto: RegisterDto = {
+      name: 'Controller Test',
       email: 'controller-test@example.com',
       password: 'Password123',
     };
@@ -97,6 +108,7 @@ describe('AuthController', () => {
 
   it('auth/register should return 400 error code for a non-valid email', async () => {
     const dto: RegisterDto = {
+      name: 'Controller Test',
       email: 'invalid-email-format',
       password: 'Password123',
     };
@@ -259,6 +271,20 @@ describe('AuthController', () => {
     ).resolves.toEqual({ message: 'User logged out successfully' });
 
     expect(mockLogoutUseCase.execute).toHaveBeenCalledWith(undefined);
+    expect(mockResponse.clearCookie).toHaveBeenCalledWith(
+      'refreshToken',
+      expect.any(Object),
+    );
+  });
+
+  it('auth/account should soft-delete the current account and clear refresh cookie', async () => {
+    mockDeleteAccountUseCase.execute.mockResolvedValue(undefined);
+
+    await expect(
+      controller.deleteAccount('user-id', mockResponse as unknown as Response),
+    ).resolves.toEqual({ message: 'Account deleted successfully' });
+
+    expect(mockDeleteAccountUseCase.execute).toHaveBeenCalledWith('user-id');
     expect(mockResponse.clearCookie).toHaveBeenCalledWith(
       'refreshToken',
       expect.any(Object),

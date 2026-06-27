@@ -29,7 +29,11 @@ export class RegisterUseCase {
 
   async storeUserCredentials(data: RegisterDto): Promise<void> {
     const hashedPassword = await this.bcryptService.hashInput(data.password);
-    const hashedData = { email: data.email, passwordHash: hashedPassword };
+    const hashedData = {
+      name: data.name.trim(),
+      email: data.email,
+      passwordHash: hashedPassword,
+    };
     await this.authService.createUser(hashedData);
   }
 

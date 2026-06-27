@@ -16,6 +16,7 @@ const AUTH_ACTIONS: Record<string, string> = {
   login: 'auth.login',
   getProfile: 'auth.get_profile',
   updateProfile: 'auth.update_profile',
+  deleteAccount: 'auth.delete_account',
   logout: 'auth.logout',
   resetPasswordEmail: 'auth.reset_password_email',
   resetPassword: 'auth.reset_password',

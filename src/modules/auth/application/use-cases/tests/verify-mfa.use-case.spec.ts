@@ -136,6 +136,8 @@ function createUser(overrides: Partial<User> = {}): User {
     role: Role.CUSTOMER,
     createdAt: new Date('2026-06-13T00:00:00.000Z'),
     updatedAt: new Date('2026-06-13T00:00:00.000Z'),
+    deletedAt: null,
+    anonymizedAt: null,
     isEmailVerified: true,
     mfaEnabled: true,
     mfaMethod: MfaMethod.EMAIL,

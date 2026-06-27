@@ -62,6 +62,28 @@ When a valid refresh token is present, the API invalidates the matching refresh-
 
 The UI also clears local auth cookies even if the API logout call fails. This keeps the user experience reliable.
 
+## Account Deletion
+
+Authenticated users can request account deletion through:
+
+```text
+DELETE /auth/account
+```
+
+The API uses soft deletion plus anonymization rather than hard-deleting operational history:
+
+- sets `User.deletedAt` and `User.anonymizedAt`
+- replaces the user's name and email with non-identifying values
+- clears `passwordHash`
+- disables MFA and removes MFA challenges/external auth links
+- revokes active refresh sessions with `ACCOUNT_DELETED`
+- deactivates a linked `Barber` profile when the user is a barber
+- preserves historical booking rows
+
+Preserving booking facts is intentional. Barbers need accountability and reporting tools, such as counts and earnings over a week, but those reports do not require customer names or emails.
+
+The shared `AuthGuard` rejects deleted users, so old access tokens stop working against protected API routes.
+
 ## Password Reset
 
 Password reset is a two-step flow:

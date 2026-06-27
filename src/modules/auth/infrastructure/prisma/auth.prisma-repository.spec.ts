@@ -181,6 +181,138 @@ describe('AuthService repository', () => {
     });
   });
 
+  it('soft-deletes and anonymizes customer accounts while preserving rows', async () => {
+    const deletedAt = new Date('2026-06-26T12:00:00.000Z');
+    jest.useFakeTimers().setSystemTime(deletedAt);
+    const updateManySessions = jest.fn().mockResolvedValue({ count: 2 });
+    const deleteManyMfaChallenges = jest.fn().mockResolvedValue({ count: 1 });
+    const deleteManyMfa = jest.fn().mockResolvedValue({ count: 1 });
+    const deleteManyExternalAccounts = jest
+      .fn()
+      .mockResolvedValue({ count: 1 });
+    const updateUser = jest.fn().mockResolvedValue({});
+    const transaction = jest
+      .fn()
+      .mockImplementation(
+        async (
+          callback: (tx: {
+            session: { updateMany: typeof updateManySessions };
+            mfaChallenge: { deleteMany: typeof deleteManyMfaChallenges };
+            mfa: { deleteMany: typeof deleteManyMfa };
+            externalAccount: { deleteMany: typeof deleteManyExternalAccounts };
+            barber: { update: jest.Mock };
+            user: { update: typeof updateUser };
+          }) => Promise<void>,
+        ) =>
+          callback({
+            session: { updateMany: updateManySessions },
+            mfaChallenge: { deleteMany: deleteManyMfaChallenges },
+            mfa: { deleteMany: deleteManyMfa },
+            externalAccount: { deleteMany: deleteManyExternalAccounts },
+            barber: { update: jest.fn() },
+            user: { update: updateUser },
+          }),
+      );
+    const prismaService = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'user-id',
+          role: Role.CUSTOMER,
+          deletedAt: null,
+          barber: null,
+        }),
+      },
+      $transaction: transaction,
+    };
+    const authService = new AuthService(
+      prismaService as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      authService.softDeleteAccount('user-id'),
+    ).resolves.toBeUndefined();
+
+    expect(updateManySessions).toHaveBeenCalledWith({
+      where: { userId: 'user-id', revokedAt: null },
+      data: {
+        revokedAt: deletedAt,
+        revokedReason: SessionRevocationReason.ACCOUNT_DELETED,
+      },
+    });
+    expect(updateUser).toHaveBeenCalledWith({
+      where: { id: 'user-id' },
+      data: {
+        name: 'Deleted customer',
+        email: 'deleted-user-user-id@deleted.erics-barbers.local',
+        passwordHash: null,
+        isEmailVerified: false,
+        mfaEnabled: false,
+        deletedAt,
+        anonymizedAt: deletedAt,
+      },
+    });
+    jest.useRealTimers();
+  });
+
+  it('deactivates barber profiles when soft-deleting barber accounts', async () => {
+    const deactivatedAt = new Date('2026-06-26T12:00:00.000Z');
+    jest.useFakeTimers().setSystemTime(deactivatedAt);
+    const updateBarber = jest.fn().mockResolvedValue({});
+    const transaction = jest
+      .fn()
+      .mockImplementation(
+        async (
+          callback: (tx: {
+            session: { updateMany: jest.Mock };
+            mfaChallenge: { deleteMany: jest.Mock };
+            mfa: { deleteMany: jest.Mock };
+            externalAccount: { deleteMany: jest.Mock };
+            barber: { update: typeof updateBarber };
+            user: { update: jest.Mock };
+          }) => Promise<void>,
+        ) =>
+          callback({
+            session: { updateMany: jest.fn() },
+            mfaChallenge: { deleteMany: jest.fn() },
+            mfa: { deleteMany: jest.fn() },
+            externalAccount: { deleteMany: jest.fn() },
+            barber: { update: updateBarber },
+            user: { update: jest.fn() },
+          }),
+      );
+    const prismaService = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'user-id',
+          role: Role.BARBER,
+          deletedAt: null,
+          barber: { id: 'barber-id' },
+        }),
+      },
+      $transaction: transaction,
+    };
+    const authService = new AuthService(
+      prismaService as never,
+      {} as never,
+      {} as never,
+    );
+
+    await authService.softDeleteAccount('user-id');
+
+    expect(updateBarber).toHaveBeenCalledWith({
+      where: { id: 'barber-id' },
+      data: {
+        displayName: 'Deleted barber barber-id',
+        phone: 'deleted-barber-id',
+        isActive: false,
+        deactivatedAt,
+      },
+    });
+    jest.useRealTimers();
+  });
+
   it('uses the configured staff base URL for staff password reset emails', async () => {
     process.env.CLIENT_BASE_URL = 'https://ui.example.test';
     process.env.STAFF_CLIENT_BASE_URL = 'https://staff.example.test';

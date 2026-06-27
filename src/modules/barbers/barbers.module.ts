@@ -11,6 +11,7 @@ import { AuthService } from '../auth/infrastructure/prisma/auth.prisma-repositor
 import { BcryptService } from '../auth/infrastructure/services/bcrypt.service';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
 import { TokenService } from '../auth/infrastructure/services/jwt.service';
+import { AuthGuard } from 'src/common/guards/auth.guard';
 
 @Module({
   imports: [PrismaModule],
@@ -20,6 +21,7 @@ import { TokenService } from '../auth/infrastructure/services/jwt.service';
     BcryptService,
     ResendService,
     TokenService,
+    AuthGuard,
     BarbersService,
     GetBarberUseCase,
     GetBarbersUseCase,

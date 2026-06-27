@@ -16,6 +16,8 @@ model User {
   role            Role      @default(CUSTOMER)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  anonymizedAt    DateTime?
   isEmailVerified Boolean   @default(false)
   mfaEnabled      Boolean   @default(false)
   mfaMethod       MfaMethod @default(EMAIL)
@@ -30,12 +32,13 @@ model User {
 }
 
 model Barber {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  displayName String   @unique
-  isActive    Boolean  @default(true)
-  phone       String   @unique
-  createdAt   DateTime @default(now())
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  displayName   String    @unique
+  isActive      Boolean   @default(true)
+  phone         String    @unique
+  createdAt     DateTime  @default(now())
+  deactivatedAt DateTime?
 
   // Relations
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -127,6 +130,7 @@ enum MfaMethod {
 enum SessionRevocationReason {
   ROTATED
   REPLAY_DETECTED
+  ACCOUNT_DELETED
 }
 
 enum Services {

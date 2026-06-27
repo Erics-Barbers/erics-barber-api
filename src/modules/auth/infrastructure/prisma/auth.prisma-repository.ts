@@ -66,8 +66,8 @@ export class AuthService {
   }
 
   async getProfile(userId: string): Promise<UserProfile> {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
+    const user = await this.prismaService.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: {
         id: true,
         name: true,
@@ -83,6 +83,13 @@ export class AuthService {
     userId: string,
     profileData: UserUpdateInput,
   ): Promise<UserProfile> {
+    const user = await this.prismaService.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!user) throw new NotFoundException('Current user not found');
+
     const updatedUser = await this.prismaService.user.update({
       where: { id: userId },
       data: profileData,
@@ -99,11 +106,15 @@ export class AuthService {
   }
 
   async findUserByEmail(email: string): Promise<User | null> {
-    return await this.prismaService.user.findUnique({ where: { email } });
+    const user = await this.prismaService.user.findUnique({ where: { email } });
+    return user?.deletedAt ? null : user;
   }
 
   async findUserById(userId: string): Promise<User | null> {
-    return await this.prismaService.user.findUnique({ where: { id: userId } });
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+    return user?.deletedAt ? null : user;
   }
 
   async createUser(data: Prisma.UserCreateInput): Promise<User> {
@@ -112,6 +123,61 @@ export class AuthService {
 
   async deleteUser(userId: string): Promise<void> {
     await this.prismaService.user.delete({ where: { id: userId } });
+  }
+
+  async softDeleteAccount(userId: string): Promise<void> {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: { barber: true },
+    });
+
+    if (!user || user.deletedAt) {
+      throw new NotFoundException('User not found');
+    }
+
+    const deletedAt = new Date();
+    const anonymizedEmail = `deleted-user-${user.id}@deleted.erics-barbers.local`;
+    const anonymizedName =
+      user.role === Role.BARBER ? 'Deleted barber' : 'Deleted customer';
+
+    await this.prismaService.$transaction(async (tx) => {
+      await tx.session.updateMany({
+        where: { userId, revokedAt: null },
+        data: {
+          revokedAt: deletedAt,
+          revokedReason: SessionRevocationReason.ACCOUNT_DELETED,
+        },
+      });
+
+      await tx.mfaChallenge.deleteMany({ where: { userId } });
+      await tx.mfa.deleteMany({ where: { userId } });
+      await tx.externalAccount.deleteMany({ where: { userId } });
+
+      if (user.barber) {
+        await tx.barber.update({
+          where: { id: user.barber.id },
+          data: {
+            displayName: `Deleted barber ${user.barber.id}`,
+            phone: `deleted-${user.barber.id}`,
+            isActive: false,
+            deactivatedAt: deletedAt,
+          },
+        });
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          name: anonymizedName,
+          email: anonymizedEmail,
+          passwordHash: null,
+          isEmailVerified: false,
+          mfaEnabled: false,
+          deletedAt,
+          anonymizedAt: deletedAt,
+        },
+      });
+    });
   }
 
   async deleteUnverifiedCustomersCreatedBefore(cutoff: Date): Promise<number> {
@@ -153,10 +219,10 @@ export class AuthService {
     password: string,
   ): Promise<User | null> {
     const user = await this.findUserByEmail(email);
-    if (!user) return null;
+    if (!user?.passwordHash) return null;
     const isValid = await this.bcryptService.compareHashedInput(
       password,
-      user.passwordHash!,
+      user.passwordHash,
     );
     return isValid ? user : null;
   }

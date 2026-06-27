@@ -46,6 +46,7 @@ describe('RegisterUseCase', () => {
     authService.sendVerificationEmail.mockResolvedValue(undefined);
 
     const dto: RegisterDto = {
+      name: 'Test User',
       email: 'test@example.com',
       password: 'Password1',
     };
@@ -55,6 +56,7 @@ describe('RegisterUseCase', () => {
     );
     expect(bcryptService.hashInput).toHaveBeenCalledWith('Password1');
     expect(authService.createUser).toHaveBeenCalledWith({
+      name: 'Test User',
       email: 'test@example.com',
       passwordHash: 'hashedPassword',
     });
@@ -73,6 +75,7 @@ describe('RegisterUseCase', () => {
       email: 'test@example.com',
     });
     const dto: RegisterDto = {
+      name: 'Test User',
       email: 'test@example.com',
       password: 'Password1',
     };
@@ -91,6 +94,8 @@ function createUser(overrides: Partial<User> = {}): User {
     role: Role.CUSTOMER,
     createdAt: new Date('2026-06-14T00:00:00.000Z'),
     updatedAt: new Date('2026-06-14T00:00:00.000Z'),
+    deletedAt: null,
+    anonymizedAt: null,
     isEmailVerified: false,
     mfaEnabled: false,
     mfaMethod: MfaMethod.EMAIL,

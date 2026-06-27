@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Post,
@@ -48,6 +49,7 @@ import { VerifyMfaUseCase } from '../../application/use-cases/verify-mfa.use-cas
 import { UpdateMfaPreferenceUseCase } from '../../application/use-cases/update-mfa-preference.use-case';
 import { MfaPreferenceDto } from '../dto/mfa-preference.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
+import { DeleteAccountUseCase } from '../../application/use-cases/delete-account.use-case';
 
 const ONE_MINUTE = 60_000;
 const ONE_HOUR = 60 * 60_000;
@@ -68,6 +70,7 @@ export class AuthController {
     private readonly sendVerificationEmailUseCase: SendVerificationEmailUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly updateMfaPreferenceUseCase: UpdateMfaPreferenceUseCase,
+    private readonly deleteAccountUseCase: DeleteAccountUseCase,
   ) {}
 
   @HttpCode(201)
@@ -179,6 +182,27 @@ export class AuthController {
     @Body() profileData: UpdateProfileDto,
   ) {
     return await this.updateProfileUseCase.execute(userId, profileData);
+  }
+
+  @HttpCode(200)
+  @ApiOkResponse({
+    description: 'Account deleted successfully',
+  })
+  @UseGuards(AuthGuard)
+  @Delete('account')
+  async deleteAccount(
+    @CurrentUser() userId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.deleteAccountUseCase.execute(userId);
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      path: '/auth',
+      secure: true,
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    return { message: 'Account deleted successfully' };
   }
 
   @HttpCode(200)

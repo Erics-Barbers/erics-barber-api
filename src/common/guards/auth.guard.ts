@@ -7,10 +7,14 @@ import {
 
 import { Request } from 'express';
 import { TokenService } from 'src/modules/auth/infrastructure/services/jwt.service';
+import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly tokenService: TokenService) {}
+  constructor(
+    private readonly tokenService: TokenService,
+    private readonly prismaService: PrismaService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -31,6 +35,15 @@ export class AuthGuard implements CanActivate {
     if (payload?.tokenType !== 'access' || !payload.sub) {
       throw new UnauthorizedException('Invalid or expired token');
     }
+    const user = await this.prismaService.user.findFirst({
+      where: { id: payload.sub, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
     request.user = { ...payload, sub: payload.sub };
 
     return true;

@@ -24,6 +24,8 @@ import { UnverifiedUserCleanupService } from './application/services/unverified-
 import { VerifyMfaUseCase } from './application/use-cases/verify-mfa.use-case';
 import { UpdateMfaPreferenceUseCase } from './application/use-cases/update-mfa-preference.use-case';
 import { ExpiredAuthStateCleanupService } from './application/services/expired-auth-state-cleanup.service';
+import { DeleteAccountUseCase } from './application/use-cases/delete-account.use-case';
+import { AuthGuard } from 'src/common/guards/auth.guard';
 
 @Module({
   imports: [PrismaModule],
@@ -34,6 +36,7 @@ import { ExpiredAuthStateCleanupService } from './application/services/expired-a
     BcryptService,
     ResendService,
     TokenService,
+    AuthGuard,
     // Use Cases
     RegisterUseCase,
     LoginUseCase,
@@ -47,6 +50,7 @@ import { ExpiredAuthStateCleanupService } from './application/services/expired-a
     SendVerificationEmailUseCase,
     RefreshTokenUseCase,
     UpdateMfaPreferenceUseCase,
+    DeleteAccountUseCase,
     UnverifiedUserCleanupService,
     ExpiredAuthStateCleanupService,
   ],
