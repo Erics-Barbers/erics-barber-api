@@ -2,6 +2,7 @@ import { VerifyEmailUseCase } from '../verify-email.use-case';
 import { UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '../../../infrastructure/prisma/auth.prisma-repository';
 import { BcryptService } from '../../../infrastructure/services/bcrypt.service';
+import { BookingService } from 'src/modules/booking/infrastructure/prisma/booking.prisma-repository';
 import {
   EmailVerificationTokenPayload,
   RefreshTokenPayload,
@@ -21,6 +22,9 @@ describe('VerifyEmailUseCase', () => {
     Pick<TokenService, 'verifyToken' | 'issueTokens' | 'decodeToken'>
   >;
   let bcryptService: jest.Mocked<Pick<BcryptService, 'hashInput'>>;
+  let bookingService: jest.Mocked<
+    Pick<BookingService, 'linkGuestBookingsToUser'>
+  >;
 
   beforeEach(() => {
     authService = {
@@ -36,10 +40,14 @@ describe('VerifyEmailUseCase', () => {
     bcryptService = {
       hashInput: jest.fn(),
     };
+    bookingService = {
+      linkGuestBookingsToUser: jest.fn(),
+    };
     verifyEmailUseCase = new VerifyEmailUseCase(
       authService as unknown as AuthService,
       tokenService as unknown as TokenService,
       bcryptService as unknown as BcryptService,
+      bookingService as unknown as BookingService,
     );
   });
 
@@ -71,6 +79,7 @@ describe('VerifyEmailUseCase', () => {
     };
     tokenService.decodeToken.mockReturnValue(refreshPayload);
     bcryptService.hashInput.mockResolvedValue('hashed-refresh-token');
+    bookingService.linkGuestBookingsToUser.mockResolvedValue(2);
     const result = await verifyEmailUseCase.execute(
       'valid-token',
       'test-agent',
@@ -85,6 +94,10 @@ describe('VerifyEmailUseCase', () => {
         refreshToken: 'hashed-refresh-token',
         userAgent: 'test-agent',
       }),
+    );
+    expect(bookingService.linkGuestBookingsToUser).toHaveBeenCalledWith(
+      'userId',
+      'test@example.com',
     );
   });
 
@@ -101,6 +114,7 @@ describe('VerifyEmailUseCase', () => {
     ).rejects.toThrow(UnauthorizedException);
 
     expect(authService.markEmailAsVerified).not.toHaveBeenCalled();
+    expect(bookingService.linkGuestBookingsToUser).not.toHaveBeenCalled();
     expect(authService.createSession).not.toHaveBeenCalled();
   });
 });

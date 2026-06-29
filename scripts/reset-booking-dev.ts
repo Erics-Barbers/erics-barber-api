@@ -1,7 +1,11 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
-import { demoBarbers, demoServices } from './booking-dev-data';
+import {
+  demoBarbers,
+  demoServices,
+  legacyDemoServiceNames,
+} from './booking-dev-data';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -9,7 +13,10 @@ const prisma = new PrismaClient({
 
 async function main() {
   const demoEmails = demoBarbers.map((barber) => barber.email);
-  const demoServiceNames = demoServices.map((service) => service.name);
+  const demoServiceNames = [
+    ...demoServices.map((service) => service.name),
+    ...legacyDemoServiceNames,
+  ];
   const users = await prisma.user.findMany({
     where: { email: { in: demoEmails } },
     select: { id: true },

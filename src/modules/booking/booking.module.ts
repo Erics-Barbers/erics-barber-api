@@ -34,5 +34,6 @@ import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
     UpdateBookingUseCase,
     CreateBookingUseCase,
   ],
+  exports: [BookingService],
 })
 export class BookingModule {}

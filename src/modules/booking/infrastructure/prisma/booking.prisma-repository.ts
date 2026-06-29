@@ -202,6 +202,21 @@ export class BookingService {
     return userBookings;
   }
 
+  async linkGuestBookingsToUser(userId: string, email: string) {
+    const result = await this.prismaService.booking.updateMany({
+      where: {
+        userId: null,
+        customerEmail: {
+          equals: email.trim(),
+          mode: 'insensitive',
+        },
+      },
+      data: { userId },
+    } as never);
+
+    return result.count;
+  }
+
   private async getBookingAccessWhere(
     bookingId: string,
     userId: string,

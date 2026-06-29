@@ -1,19 +1,25 @@
 export const demoServices = [
   {
     name: 'Haircut',
-    description: 'A clean cut finished to your preferred style.',
-    pricePence: 1800,
-  },
-  {
-    name: 'Skin Fade',
-    description: 'A close fade with a sharp finish.',
-    pricePence: 2000,
-  },
-  {
-    name: 'Haircut and Beard',
-    description: 'Haircut with beard shaping and tidy-up.',
+    description: 'Classic haircut with consultation and finishing style.',
     pricePence: 2500,
   },
+  {
+    name: 'Beard',
+    description: 'Beard trim and shape-up with clean edges.',
+    pricePence: 1500,
+  },
+  {
+    name: 'Haircut + Beard',
+    description: 'Haircut plus beard trim and shape-up.',
+    pricePence: 3500,
+  },
+];
+
+export const legacyDemoServiceNames = [
+  'Skin Fade',
+  'Haircut and Beard',
+  'Full Service',
 ];
 
 export const demoBarbers = [

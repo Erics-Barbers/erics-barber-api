@@ -25,6 +25,7 @@ describe('BookingService', () => {
       create: jest.fn(),
       findFirst: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
   });
 
@@ -240,5 +241,32 @@ describe('BookingService', () => {
       where: { id: 'booking-id' },
       data: { status: BookingStatus.CANCELLED },
     });
+  });
+
+  it('links unowned guest bookings by email to a verified user', async () => {
+    const prismaService = createPrismaService();
+    prismaService.booking.updateMany.mockResolvedValue({ count: 2 });
+    const bookingService = new BookingService(
+      prismaService as never,
+      resendService as never,
+      availabilityService as never,
+    );
+
+    const count = await bookingService.linkGuestBookingsToUser(
+      'customer-id',
+      'Customer@Example.com ',
+    );
+
+    expect(prismaService.booking.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: null,
+        customerEmail: {
+          equals: 'Customer@Example.com',
+          mode: 'insensitive',
+        },
+      },
+      data: { userId: 'customer-id' },
+    });
+    expect(count).toBe(2);
   });
 });

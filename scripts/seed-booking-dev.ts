@@ -2,7 +2,11 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { DayOfWeek, Role } from '../src/generated/prisma/enums';
-import { demoBarbers, demoServices } from './booking-dev-data';
+import {
+  demoBarbers,
+  demoServices,
+  legacyDemoServiceNames,
+} from './booking-dev-data';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -18,6 +22,11 @@ const workingDays = [
 ];
 
 async function seedServices() {
+  await prisma.service.updateMany({
+    where: { name: { in: legacyDemoServiceNames } },
+    data: { isActive: false },
+  });
+
   for (const service of demoServices) {
     await prisma.service.upsert({
       where: { name: service.name },

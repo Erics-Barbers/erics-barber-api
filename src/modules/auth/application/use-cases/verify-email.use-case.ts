@@ -9,6 +9,7 @@ import { AuthResponseDto } from '../../presentation/dto/auth-response.dto';
 import { User } from 'src/generated/prisma/client';
 import { SessionCreateInput } from 'src/generated/prisma/models/Session';
 import { BcryptService } from '../../infrastructure/services/bcrypt.service';
+import { BookingService } from 'src/modules/booking/infrastructure/prisma/booking.prisma-repository';
 
 @Injectable()
 export class VerifyEmailUseCase {
@@ -16,11 +17,13 @@ export class VerifyEmailUseCase {
     private readonly authService: AuthService,
     private readonly tokenService: TokenService,
     private readonly bcryptService: BcryptService,
+    private readonly bookingService: BookingService,
   ) {}
 
   async execute(token: string, userAgent: string): Promise<AuthResponseDto> {
     const payload = await this.verifyToken(token);
     const user = await this.markEmailAsVerified(payload.email);
+    await this.bookingService.linkGuestBookingsToUser(user.id, user.email);
     return await this.issueTokens(user, userAgent);
   }
 
