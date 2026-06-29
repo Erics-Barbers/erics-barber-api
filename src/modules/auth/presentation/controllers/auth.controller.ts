@@ -25,6 +25,7 @@ import { ResetPasswordUseCase } from '../../application/use-cases/reset-password
 import { ResetPasswordEmailUseCase } from '../../application/use-cases/reset-password-email.use-case';
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email.use-case';
 import { SendVerificationEmailUseCase } from '../../application/use-cases/send-verification-email.use-case';
+import { AccountLookupUseCase } from '../../application/use-cases/account-lookup.use-case';
 
 import { LoginRequestDto, LoginResultDto } from '../dto/login.dto';
 import { MfaDto } from '../dto/mfa.dto';
@@ -50,6 +51,10 @@ import { UpdateMfaPreferenceUseCase } from '../../application/use-cases/update-m
 import { MfaPreferenceDto } from '../dto/mfa-preference.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { DeleteAccountUseCase } from '../../application/use-cases/delete-account.use-case';
+import {
+  AccountLookupDto,
+  AccountLookupResponseDto,
+} from '../dto/account-lookup.dto';
 
 const ONE_MINUTE = 60_000;
 const ONE_HOUR = 60 * 60_000;
@@ -71,6 +76,7 @@ export class AuthController {
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly updateMfaPreferenceUseCase: UpdateMfaPreferenceUseCase,
     private readonly deleteAccountUseCase: DeleteAccountUseCase,
+    private readonly accountLookupUseCase: AccountLookupUseCase,
   ) {}
 
   @HttpCode(201)
@@ -126,6 +132,19 @@ export class AuthController {
       refreshToken,
       refreshMaxAgeSeconds,
     };
+  }
+
+  @HttpCode(200)
+  @ApiOkResponse({
+    description: 'Account lookup completed',
+    type: AccountLookupResponseDto,
+  })
+  @Throttle({ default: { limit: 10, ttl: ONE_MINUTE } })
+  @Post('account-lookup')
+  async accountLookup(
+    @Body() dto: AccountLookupDto,
+  ): Promise<AccountLookupResponseDto> {
+    return await this.accountLookupUseCase.execute(dto.email);
   }
 
   @HttpCode(200)
