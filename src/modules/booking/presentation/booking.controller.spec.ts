@@ -9,6 +9,7 @@ import { GetBookingDetailsUseCase } from '../application/use-cases/get-booking.u
 import { CreateBookingUseCase } from '../application/use-cases/create-booking.use-case';
 import { UpdateBookingUseCase } from '../application/use-cases/update-booking.use-case';
 import { AuthGuard } from 'src/common/guards/auth.guard';
+import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { BookingGuard } from 'src/common/guards/booking.guard';
 import { Role } from 'src/common/constants/role.enum';
@@ -39,6 +40,8 @@ describe('BookingController', () => {
       ],
     })
       .overrideGuard(AuthGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(OptionalAuthGuard)
       .useValue({ canActivate: jest.fn(() => true) })
       .overrideGuard(RolesGuard)
       .useValue({ canActivate: jest.fn(() => true) })

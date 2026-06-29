@@ -19,13 +19,14 @@ import { AuthGuard } from 'src/common/guards/auth.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/constants/role.enum';
 import { BookingGuard } from 'src/common/guards/booking.guard';
+import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import {
   CurrentUser,
+  CurrentUserOptional,
   CurrentUserRole,
 } from 'src/common/decorators/current-user.decorator';
 
-@UseGuards(AuthGuard, RolesGuard, BookingGuard)
 @Controller('booking')
 export class BookingController {
   constructor(
@@ -36,6 +37,7 @@ export class BookingController {
   ) {}
 
   @Get('')
+  @UseGuards(AuthGuard, RolesGuard, BookingGuard)
   @Roles(Role.Admin, Role.Customer)
   async getBookings(
     @CurrentUser() userId: string,
@@ -46,6 +48,7 @@ export class BookingController {
   }
 
   @Get(':id')
+  @UseGuards(AuthGuard, RolesGuard, BookingGuard)
   @Roles(Role.Admin, Role.Customer, Role.Barber)
   async getBookingDetails(
     @CurrentUser() userId: string,
@@ -61,9 +64,9 @@ export class BookingController {
   }
 
   @Post('')
-  @Roles(Role.Admin, Role.Customer)
+  @UseGuards(BookingGuard, OptionalAuthGuard)
   async createBooking(
-    @CurrentUser() userId: string,
+    @CurrentUserOptional() userId: string | undefined,
     @Body() dto: CreateBookingDto,
   ) {
     const booking = await this.createBookingUseCase.execute(userId, dto);
@@ -71,6 +74,7 @@ export class BookingController {
   }
 
   @Patch(':id')
+  @UseGuards(AuthGuard, RolesGuard, BookingGuard)
   @Roles(Role.Admin, Role.Customer)
   async updateBooking(
     @CurrentUser() userId: string,
@@ -83,6 +87,7 @@ export class BookingController {
   }
 
   @Patch(':id/cancel')
+  @UseGuards(AuthGuard, RolesGuard, BookingGuard)
   @Roles(Role.Admin, Role.Customer)
   async cancelBooking(
     @CurrentUser() userId: string,

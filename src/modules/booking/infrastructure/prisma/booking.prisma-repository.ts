@@ -22,7 +22,7 @@ export class BookingService {
     private readonly availabilityService: AvailabilityService,
   ) {}
 
-  async createBooking(userId: string, dto: CreateBookingDto) {
+  async createBooking(userId: string | undefined, dto: CreateBookingDto) {
     // Check new booking time is not in the past
     if (dto.appointmentDate < new Date()) {
       throw new BadRequestException('Cannot create booking in the past');
@@ -38,24 +38,39 @@ export class BookingService {
       dto.appointmentDate.getTime() + BOOKING_SLOT_MINUTES * 60 * 1000,
     );
 
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-      select: { email: true },
-    });
+    const user = userId
+      ? await this.prismaService.user.findUnique({
+          where: { id: userId },
+          select: { email: true, name: true },
+        })
+      : null;
 
-    if (!user) {
+    if (userId && !user) {
       throw new NotFoundException('User not found');
+    }
+
+    const customerName = dto.customerName?.trim() || user?.name;
+    const customerEmail = dto.customerEmail?.trim() || user?.email;
+    const customerPhone = dto.customerPhone?.trim();
+
+    if (!customerName || !customerEmail || (!userId && !customerPhone)) {
+      throw new BadRequestException(
+        'Customer name, email, and phone are required for guest bookings',
+      );
     }
 
     const booking = await this.prismaService.booking.create({
       data: {
         userId,
+        customerName,
+        customerEmail,
+        customerPhone,
         serviceId: dto.serviceId,
         barberId: dto.barberId,
         status: BookingStatus.CONFIRMED,
         startTime: dto.appointmentDate,
         endTime: appointmentEndTime,
-      },
+      } as never,
       include: {
         service: true,
         barber: true,
@@ -63,7 +78,7 @@ export class BookingService {
     });
 
     await this.resendService.sendEmail(
-      user.email,
+      customerEmail,
       'Booking Confirmation',
       `<p>Your booking for ${dto.appointmentDate.toISOString()} has been confirmed.</p>`,
     );

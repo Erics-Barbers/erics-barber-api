@@ -13,6 +13,7 @@ import { AuthGuard } from 'src/common/guards/auth.guard';
 import { BookingGuard } from 'src/common/guards/booking.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { AvailabilityModule } from '../availability/availability.module';
+import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
 
 @Module({
   imports: [PrismaModule, AvailabilityModule],
@@ -24,6 +25,7 @@ import { AvailabilityModule } from '../availability/availability.module';
     ResendService,
     TokenService,
     AuthGuard,
+    OptionalAuthGuard,
     RolesGuard,
     BookingGuard,
     // Use Cases

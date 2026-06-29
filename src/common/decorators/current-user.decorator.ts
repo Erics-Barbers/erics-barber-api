@@ -19,6 +19,13 @@ export const CurrentUser = createParamDecorator(
   },
 );
 
+export const CurrentUserOptional = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext) => {
+    const req = ctx.switchToHttp().getRequest<Request>();
+    return req.user?.sub;
+  },
+);
+
 export const CurrentUserRole = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext) => {
     const req = ctx.switchToHttp().getRequest<Request>();

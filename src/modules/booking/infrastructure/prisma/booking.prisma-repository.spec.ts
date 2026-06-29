@@ -44,6 +44,7 @@ describe('BookingService', () => {
     };
     prismaService.user.findUnique.mockResolvedValue({
       email: 'customer@example.com',
+      name: 'Customer Name',
     });
     prismaService.booking.create.mockResolvedValue(createdBooking);
     resendService.sendEmail.mockResolvedValue(undefined);
@@ -70,6 +71,9 @@ describe('BookingService', () => {
     expect(prismaService.booking.create).toHaveBeenCalledWith({
       data: {
         userId: 'customer-id',
+        customerName: 'Customer Name',
+        customerEmail: 'customer@example.com',
+        customerPhone: undefined,
         serviceId: 'service-id',
         barberId: 'barber-id',
         status: BookingStatus.CONFIRMED,
@@ -87,6 +91,82 @@ describe('BookingService', () => {
       '<p>Your booking for 2026-07-01T10:00:00.000Z has been confirmed.</p>',
     );
     expect(result).toBe(createdBooking);
+  });
+
+  it('creates guest bookings with supplied contact details', async () => {
+    const prismaService = createPrismaService();
+    const createdBooking = {
+      id: 'booking-id',
+      customerEmail: 'guest@example.com',
+      customerName: 'Guest Customer',
+      customerPhone: '+447900000000',
+      status: BookingStatus.CONFIRMED,
+    };
+    prismaService.booking.create.mockResolvedValue(createdBooking);
+    resendService.sendEmail.mockResolvedValue(undefined);
+    availabilityService.assertSlotAvailable.mockResolvedValue(undefined);
+
+    const bookingService = new BookingService(
+      prismaService as never,
+      resendService as never,
+      availabilityService as never,
+    );
+    const appointmentDate = new Date('2026-07-01T10:00:00.000Z');
+
+    const result = await bookingService.createBooking(undefined, {
+      appointmentDate,
+      barberId: 'barber-id',
+      customerEmail: 'guest@example.com',
+      customerName: 'Guest Customer',
+      customerPhone: '+447900000000',
+      serviceId: 'service-id',
+    });
+
+    expect(prismaService.user.findUnique).not.toHaveBeenCalled();
+    expect(prismaService.booking.create).toHaveBeenCalledWith({
+      data: {
+        userId: undefined,
+        customerName: 'Guest Customer',
+        customerEmail: 'guest@example.com',
+        customerPhone: '+447900000000',
+        serviceId: 'service-id',
+        barberId: 'barber-id',
+        status: BookingStatus.CONFIRMED,
+        startTime: appointmentDate,
+        endTime: new Date('2026-07-01T10:30:00.000Z'),
+      },
+      include: {
+        service: true,
+        barber: true,
+      },
+    });
+    expect(resendService.sendEmail).toHaveBeenCalledWith(
+      'guest@example.com',
+      'Booking Confirmation',
+      '<p>Your booking for 2026-07-01T10:00:00.000Z has been confirmed.</p>',
+    );
+    expect(result).toBe(createdBooking);
+  });
+
+  it('rejects guest bookings without contact details', async () => {
+    const prismaService = createPrismaService();
+    availabilityService.assertSlotAvailable.mockResolvedValue(undefined);
+
+    const bookingService = new BookingService(
+      prismaService as never,
+      resendService as never,
+      availabilityService as never,
+    );
+
+    await expect(
+      bookingService.createBooking(undefined, {
+        serviceId: 'service-id',
+        barberId: 'barber-id',
+        appointmentDate: new Date('2026-07-01T10:00:00.000Z'),
+      }),
+    ).rejects.toThrow('Customer name, email, and phone are required');
+
+    expect(prismaService.booking.create).not.toHaveBeenCalled();
   });
 
   it('rejects bookings that do not start on a half-hour boundary', async () => {

@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsDate, IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsDate, IsEmail, IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateBookingDto {
   @ApiProperty({
@@ -26,4 +26,31 @@ export class CreateBookingDto {
   @Type(() => Date)
   @IsDate()
   readonly appointmentDate!: Date;
+
+  @ApiPropertyOptional({
+    description:
+      'Customer name for guest bookings. Authenticated customers can omit this.',
+    example: 'Eric Customer',
+  })
+  @IsOptional()
+  @IsString()
+  readonly customerName?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Customer email for guest bookings. Authenticated customers can omit this.',
+    example: 'customer@example.com',
+  })
+  @IsOptional()
+  @IsEmail()
+  readonly customerEmail?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Customer phone number for guest bookings. Authenticated customers can omit this.',
+    example: '+447900000000',
+  })
+  @IsOptional()
+  @IsString()
+  readonly customerPhone?: string;
 }

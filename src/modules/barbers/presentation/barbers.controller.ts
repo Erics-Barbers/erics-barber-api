@@ -23,7 +23,6 @@ import { UpdateBarberUseCase } from '../application/use-cases/update-barber.use-
 import { DeleteBarberDto } from './dto/delete-barber.dto';
 import { UpdateBarberDto } from './dto/update-barber.dto';
 
-@UseGuards(AuthGuard, RolesGuard)
 @Controller('barbers')
 export class BarbersController {
   constructor(
@@ -36,7 +35,6 @@ export class BarbersController {
 
   @HttpCode(200)
   @Get('')
-  @Roles(Role.Admin, Role.Customer)
   async getBarbers() {
     const barbers = await this.getBarbersUseCase.execute();
     return barbers;
@@ -44,6 +42,7 @@ export class BarbersController {
 
   @HttpCode(200)
   @Get(':id')
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin, Role.Customer, Role.Barber)
   async getBarberDetails(@Param() dto: GetBarberDto) {
     const barber = await this.getBarberUseCase.execute(dto.id);
@@ -52,6 +51,7 @@ export class BarbersController {
 
   @HttpCode(201)
   @Post('')
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
   async createBarber(@Body() dto: CreateBarberDto) {
     const barber = await this.createBarberUseCase.execute(dto);
@@ -60,6 +60,7 @@ export class BarbersController {
 
   @HttpCode(200)
   @Put(':id')
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
   async updateBarber(@Param('id') id: string, @Body() dto: UpdateBarberDto) {
     const barber = await this.updateBarberUseCase.execute(id, dto);
@@ -68,6 +69,7 @@ export class BarbersController {
 
   @HttpCode(200)
   @Delete(':id')
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
   async deleteBarber(@Param() dto: DeleteBarberDto) {
     await this.deleteBarberUseCase.execute(dto.id);

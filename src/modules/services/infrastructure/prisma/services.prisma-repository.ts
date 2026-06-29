@@ -8,7 +8,7 @@ export class ServicesRepository {
   async getActiveServices() {
     return await this.prismaService.service.findMany({
       where: { isActive: true },
-      orderBy: { name: 'asc' },
+      orderBy: [{ pricePence: 'desc' }, { name: 'asc' }],
     });
   }
 }
