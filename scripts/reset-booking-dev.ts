@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
+import { OutboxEventType } from '../src/generated/prisma/enums';
 import {
   demoBarbers,
   demoServices,
@@ -41,6 +42,17 @@ async function main() {
         { barberId: { in: barberIds } },
         { serviceId: { in: serviceIds } },
       ],
+    },
+  });
+  await prisma.outboxEvent.deleteMany({
+    where: {
+      type: {
+        in: [
+          OutboxEventType.BOOKING_CONFIRMATION_EMAIL,
+          OutboxEventType.BOOKING_UPDATED_EMAIL,
+          OutboxEventType.BOOKING_CANCELLED_EMAIL,
+        ],
+      },
     },
   });
   await prisma.barberAvailabilityException.deleteMany({

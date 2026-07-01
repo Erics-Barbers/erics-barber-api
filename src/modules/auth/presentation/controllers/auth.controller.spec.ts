@@ -21,6 +21,7 @@ import { UpdateMfaPreferenceUseCase } from '../../application/use-cases/update-m
 import { Request, Response } from 'express';
 import { DeleteAccountUseCase } from '../../application/use-cases/delete-account.use-case';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
+import { AccountLookupUseCase } from '../../application/use-cases/account-lookup.use-case';
 
 type MockResponse = jest.Mocked<Pick<Response, 'cookie' | 'clearCookie'>>;
 
@@ -44,6 +45,7 @@ describe('AuthController', () => {
   const mockRefreshTokenUseCase = { execute: jest.fn() };
   const mockUpdateMfaPreferenceUseCase = { execute: jest.fn() };
   const mockDeleteAccountUseCase = { execute: jest.fn() };
+  const mockAccountLookupUseCase = { execute: jest.fn() };
   const mockPrismaService = {
     user: {
       findFirst: jest.fn(),
@@ -82,6 +84,7 @@ describe('AuthController', () => {
           useValue: mockUpdateMfaPreferenceUseCase,
         },
         { provide: DeleteAccountUseCase, useValue: mockDeleteAccountUseCase },
+        { provide: AccountLookupUseCase, useValue: mockAccountLookupUseCase },
       ],
     }).compile();
 

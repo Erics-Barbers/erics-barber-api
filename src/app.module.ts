@@ -14,6 +14,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { RequestLoggingMiddleware } from './common/middleware/request-logging.middleware';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { OutboxModule } from './infrastructure/outbox/outbox.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ServicesModule,
     PaymentsModule,
     NotificationsModule,
+    OutboxModule,
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot({
       throttlers: [

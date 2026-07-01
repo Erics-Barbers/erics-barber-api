@@ -18,8 +18,9 @@ export class CreateBookingDto {
   readonly barberId!: string;
 
   @ApiProperty({
-    description: 'Booking start time. Must be on the hour or half-hour mark.',
-    example: '2026-07-01T10:00:00.000Z',
+    description:
+      'Booking start time. Must be on the hour or half-hour mark, must not be today, and must be no more than 1 month ahead.',
+    example: '2026-07-02T10:00:00.000Z',
     type: String,
     format: 'date-time',
   })

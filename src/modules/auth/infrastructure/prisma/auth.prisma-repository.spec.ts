@@ -1,7 +1,11 @@
 import { Role } from 'src/generated/prisma/client';
 import { AuthService } from './auth.prisma-repository';
 import { SessionCreateInput } from 'src/generated/prisma/models/Session';
-import { SessionRevocationReason } from 'src/generated/prisma/enums';
+import {
+  OutboxEventStatus,
+  OutboxEventType,
+  SessionRevocationReason,
+} from 'src/generated/prisma/enums';
 
 describe('AuthService repository', () => {
   const originalClientBaseUrl = process.env.CLIENT_BASE_URL;
@@ -19,11 +23,7 @@ describe('AuthService repository', () => {
         deleteMany,
       },
     };
-    const authService = new AuthService(
-      prismaService as never,
-      {} as never,
-      {} as never,
-    );
+    const authService = new AuthService(prismaService as never, {} as never);
     const cutoff = new Date('2026-06-06T02:00:00.000Z');
 
     await expect(
@@ -46,11 +46,7 @@ describe('AuthService repository', () => {
         deleteMany,
       },
     };
-    const authService = new AuthService(
-      prismaService as never,
-      {} as never,
-      {} as never,
-    );
+    const authService = new AuthService(prismaService as never, {} as never);
     const referenceDate = new Date('2026-06-13T03:00:00.000Z');
 
     await expect(
@@ -71,11 +67,7 @@ describe('AuthService repository', () => {
         deleteMany,
       },
     };
-    const authService = new AuthService(
-      prismaService as never,
-      {} as never,
-      {} as never,
-    );
+    const authService = new AuthService(prismaService as never, {} as never);
     const referenceDate = new Date('2026-06-13T03:00:00.000Z');
 
     await expect(
@@ -111,11 +103,7 @@ describe('AuthService repository', () => {
     const prismaService = {
       $transaction: transaction,
     };
-    const authService = new AuthService(
-      prismaService as never,
-      {} as never,
-      {} as never,
-    );
+    const authService = new AuthService(prismaService as never, {} as never);
     const newSessionData: SessionCreateInput = {
       user: { connect: { id: 'user-id' } },
       refreshToken: 'hashed-new-refresh-token',
@@ -156,11 +144,7 @@ describe('AuthService repository', () => {
         updateMany,
       },
     };
-    const authService = new AuthService(
-      prismaService as never,
-      {} as never,
-      {} as never,
-    );
+    const authService = new AuthService(prismaService as never, {} as never);
 
     await expect(
       authService.revokeRefreshTokenSessionFamily(
@@ -224,11 +208,7 @@ describe('AuthService repository', () => {
       },
       $transaction: transaction,
     };
-    const authService = new AuthService(
-      prismaService as never,
-      {} as never,
-      {} as never,
-    );
+    const authService = new AuthService(prismaService as never, {} as never);
 
     await expect(
       authService.softDeleteAccount('user-id'),
@@ -293,11 +273,7 @@ describe('AuthService repository', () => {
       },
       $transaction: transaction,
     };
-    const authService = new AuthService(
-      prismaService as never,
-      {} as never,
-      {} as never,
-    );
+    const authService = new AuthService(prismaService as never, {} as never);
 
     await authService.softDeleteAccount('user-id');
 
@@ -316,11 +292,14 @@ describe('AuthService repository', () => {
   it('uses the configured staff base URL for staff password reset emails', async () => {
     process.env.CLIENT_BASE_URL = 'https://ui.example.test';
     process.env.STAFF_CLIENT_BASE_URL = 'https://staff.example.test';
-    const sendEmail = jest.fn().mockResolvedValue(undefined);
+    const outboxCreate = jest.fn().mockResolvedValue({});
     const authService = new AuthService(
+      {
+        outboxEvent: {
+          create: outboxCreate,
+        },
+      } as never,
       {} as never,
-      {} as never,
-      { sendEmail } as never,
     );
 
     await authService.sendResetPasswordEmail(
@@ -329,13 +308,70 @@ describe('AuthService repository', () => {
       'STAFF',
     );
 
-    expect(sendEmail).toHaveBeenCalledWith(
-      'barber@example.com',
-      'Reset Your Password',
-      expect.stringContaining(
-        'https://staff.example.test/reset-password?token=password-reset-token',
-      ),
+    expect(outboxCreate).toHaveBeenCalledWith({
+      data: {
+        type: OutboxEventType.AUTH_PASSWORD_RESET_EMAIL,
+        status: OutboxEventStatus.PENDING,
+        payload: {
+          link: 'https://staff.example.test/reset-password?token=password-reset-token',
+          to: 'barber@example.com',
+        },
+      },
+    });
+  });
+
+  it('queues verification emails in the outbox', async () => {
+    process.env.CLIENT_BASE_URL = 'https://ui.example.test';
+    const outboxCreate = jest.fn().mockResolvedValue({});
+    const authService = new AuthService(
+      {
+        outboxEvent: {
+          create: outboxCreate,
+        },
+      } as never,
+      {} as never,
     );
+
+    await authService.sendVerificationEmail(
+      'customer@example.com',
+      'verification-token',
+    );
+
+    expect(outboxCreate).toHaveBeenCalledWith({
+      data: {
+        type: OutboxEventType.AUTH_VERIFICATION_EMAIL,
+        status: OutboxEventStatus.PENDING,
+        payload: {
+          link: 'https://ui.example.test/email-verify?token=verification-token',
+          to: 'customer@example.com',
+        },
+      },
+    });
+  });
+
+  it('queues MFA code emails in the outbox', async () => {
+    const outboxCreate = jest.fn().mockResolvedValue({});
+    const authService = new AuthService(
+      {
+        outboxEvent: {
+          create: outboxCreate,
+        },
+      } as never,
+      {} as never,
+    );
+
+    await authService.sendMfaCodeEmail('customer@example.com', '123456');
+
+    expect(outboxCreate).toHaveBeenCalledWith({
+      data: {
+        type: OutboxEventType.AUTH_MFA_CODE_EMAIL,
+        status: OutboxEventStatus.PENDING,
+        payload: {
+          code: '123456',
+          to: 'customer@example.com',
+        },
+      },
+    });
   });
 });
 

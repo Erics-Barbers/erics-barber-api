@@ -49,6 +49,14 @@ describe('AvailabilityService', () => {
     },
   });
 
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-01T09:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('returns available slots grouped by hour for a barber day', async () => {
     const prismaService = createPrismaService();
     const availabilityService = new AvailabilityService(prismaService as never);
@@ -97,5 +105,20 @@ describe('AvailabilityService', () => {
         startTime: new Date('2026-07-06T10:00:00.000Z'),
       }),
     ).rejects.toThrow('Booking time is not available');
+  });
+
+  it('rejects slot lookups for same-day bookings', async () => {
+    const prismaService = createPrismaService();
+    const availabilityService = new AvailabilityService(prismaService as never);
+
+    await expect(
+      availabilityService.getAvailableSlots({
+        barberId: 'barber-id',
+        serviceId: 'service-id',
+        date: '2026-07-01',
+      }),
+    ).rejects.toThrow('Bookings cannot be made for today or a past date');
+
+    expect(prismaService.barber.findFirst).not.toHaveBeenCalled();
   });
 });

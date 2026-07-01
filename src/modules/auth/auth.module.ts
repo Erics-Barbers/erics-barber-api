@@ -9,7 +9,6 @@ import { AuthController } from './presentation/controllers/auth.controller';
 import { AuthService } from './infrastructure/prisma/auth.prisma-repository';
 import { BcryptService } from './infrastructure/services/bcrypt.service';
 import { TokenService } from './infrastructure/services/jwt.service';
-import { ResendService } from 'src/infrastructure/mail/resend.service';
 import { RegisterUseCase } from './application/use-cases/register.use-case';
 import { GetProfileUseCase } from './application/use-cases/get-profile.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
@@ -36,7 +35,6 @@ import { BookingModule } from '../booking/booking.module';
     // Services
     AuthService,
     BcryptService,
-    ResendService,
     TokenService,
     AuthGuard,
     // Use Cases

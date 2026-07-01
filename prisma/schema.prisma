@@ -175,6 +175,22 @@ model Service {
   bookings Booking[]
 }
 
+model OutboxEvent {
+  id          String            @id @default(cuid())
+  type        OutboxEventType
+  status      OutboxEventStatus @default(PENDING)
+  payload     Json
+  attempts    Int               @default(0)
+  lastError   String?
+  availableAt DateTime          @default(now())
+  processedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([status, availableAt])
+  @@index([type, status])
+}
+
 enum Role {
   ADMIN
   BARBER
@@ -204,6 +220,22 @@ enum BookingStatus {
   PENDING
   CONFIRMED
   CANCELLED
+}
+
+enum OutboxEventType {
+  AUTH_VERIFICATION_EMAIL
+  AUTH_PASSWORD_RESET_EMAIL
+  AUTH_MFA_CODE_EMAIL
+  BOOKING_CONFIRMATION_EMAIL
+  BOOKING_UPDATED_EMAIL
+  BOOKING_CANCELLED_EMAIL
+}
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
 }
 
 enum SessionRevocationReason {

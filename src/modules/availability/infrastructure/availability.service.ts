@@ -11,9 +11,12 @@ import {
 } from 'src/generated/prisma/enums';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { GetAvailabilitySlotsQueryDto } from '../presentation/dto/get-availability-slots.dto';
+import {
+  assertBookingDateIsBookable,
+  SHOP_TIME_ZONE,
+} from 'src/common/utils/booking-policy';
 
 const SLOT_MINUTES = 30;
-const SHOP_TIME_ZONE = 'Europe/London';
 const DAY_OF_WEEK: DayOfWeek[] = [
   DayOfWeek.SUNDAY,
   DayOfWeek.MONDAY,
@@ -42,6 +45,7 @@ export class AvailabilityService {
 
   async getAvailableSlots(query: GetAvailabilitySlotsQueryDto) {
     const serviceId = query.serviceId;
+    assertBookingDateIsBookable(query.date);
     await this.assertActiveBarber(query.barberId);
 
     if (serviceId) {

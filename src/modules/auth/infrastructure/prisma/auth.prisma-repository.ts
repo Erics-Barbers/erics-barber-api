@@ -2,15 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { BcryptService } from '../services/bcrypt.service';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { User, Prisma, Session } from 'src/generated/prisma/client';
-import { Role, SessionRevocationReason } from 'src/generated/prisma/enums';
-import { ResendService } from 'src/infrastructure/mail/resend.service';
+import {
+  OutboxEventStatus,
+  OutboxEventType,
+  Role,
+  SessionRevocationReason,
+} from 'src/generated/prisma/enums';
 import { UserProfile } from 'src/common/types/profile';
 import { UserUpdateInput } from 'src/generated/prisma/models';
-import {
-  renderMfaCodeEmail,
-  renderPasswordResetEmail,
-  renderVerificationEmail,
-} from 'src/infrastructure/mail/templates/auth-email-templates';
 
 type MfaMethod = 'EMAIL';
 
@@ -59,7 +58,6 @@ export class AuthService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly bcryptService: BcryptService,
-    private readonly resendService: ResendService,
   ) {}
 
   private get mfaChallengeDelegate(): MfaChallengeDelegate {
@@ -399,9 +397,11 @@ export class AuthService {
   async sendVerificationEmail(email: string, token: string): Promise<void> {
     const clientBaseUrl = process.env.CLIENT_BASE_URL;
     const verificationLink = `${clientBaseUrl}/email-verify?token=${token}`;
-    const subject = 'Verify Your Email';
-    const emailContent = renderVerificationEmail(verificationLink);
-    await this.resendService.sendEmail(email, subject, emailContent);
+    await this.enqueueAuthEmailEvent(
+      OutboxEventType.AUTH_VERIFICATION_EMAIL,
+      email,
+      { link: verificationLink },
+    );
   }
 
   async markEmailAsVerified(userId: string): Promise<void> {
@@ -421,14 +421,37 @@ export class AuthService {
         ? process.env.STAFF_CLIENT_BASE_URL || process.env.CLIENT_BASE_URL
         : process.env.CLIENT_BASE_URL;
     const resetLink = `${clientBaseUrl}/reset-password?token=${token}`;
-    const subject = 'Reset Your Password';
-    const emailContent = renderPasswordResetEmail(resetLink);
-    await this.resendService.sendEmail(email, subject, emailContent);
+    await this.enqueueAuthEmailEvent(
+      OutboxEventType.AUTH_PASSWORD_RESET_EMAIL,
+      email,
+      { link: resetLink },
+    );
   }
 
   async sendMfaCodeEmail(email: string, code: string): Promise<void> {
-    const subject = "Your Eric's Barbers login code";
-    const emailContent = renderMfaCodeEmail(code);
-    await this.resendService.sendEmail(email, subject, emailContent);
+    await this.enqueueAuthEmailEvent(
+      OutboxEventType.AUTH_MFA_CODE_EMAIL,
+      email,
+      {
+        code,
+      },
+    );
+  }
+
+  private async enqueueAuthEmailEvent(
+    type: OutboxEventType,
+    to: string,
+    payload: { code?: string; link?: string },
+  ): Promise<void> {
+    await this.prismaService.outboxEvent.create({
+      data: {
+        type,
+        status: OutboxEventStatus.PENDING,
+        payload: {
+          ...payload,
+          to,
+        },
+      },
+    });
   }
 }
