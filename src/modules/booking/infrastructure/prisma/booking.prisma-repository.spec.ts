@@ -40,8 +40,9 @@ describe('BookingService', () => {
       serviceId: 'service-id',
       barberId: 'barber-id',
       status: BookingStatus.CONFIRMED,
-      service: { id: 'service-id' },
-      barber: { id: 'barber-id' },
+      startTime: new Date('2026-08-01T10:00:00.000Z'),
+      service: { id: 'service-id', name: 'Haircut' },
+      barber: { id: 'barber-id', displayName: 'Eric' },
     };
     prismaService.user.findUnique.mockResolvedValue({
       email: 'customer@example.com',
@@ -89,7 +90,12 @@ describe('BookingService', () => {
     expect(resendService.sendEmail).toHaveBeenCalledWith(
       'customer@example.com',
       'Booking Confirmation',
-      '<p>Your booking for 2026-08-01T10:00:00.000Z has been confirmed.</p><p>Booking reference: <strong>booking-id</strong></p>',
+      expect.stringContaining('Booking confirmed'),
+    );
+    expect(resendService.sendEmail).toHaveBeenCalledWith(
+      'customer@example.com',
+      'Booking Confirmation',
+      expect.stringContaining('booking-id'),
     );
     expect(result).toBe(createdBooking);
   });
@@ -98,10 +104,13 @@ describe('BookingService', () => {
     const prismaService = createPrismaService();
     const createdBooking = {
       id: 'booking-id',
+      barber: { displayName: 'Eric' },
       customerEmail: 'guest@example.com',
       customerName: 'Guest Customer',
       customerPhone: '+447900000000',
+      service: { name: 'Haircut' },
       status: BookingStatus.CONFIRMED,
+      startTime: new Date('2026-08-01T10:00:00.000Z'),
     };
     prismaService.booking.create.mockResolvedValue(createdBooking);
     resendService.sendEmail.mockResolvedValue(undefined);
@@ -144,7 +153,12 @@ describe('BookingService', () => {
     expect(resendService.sendEmail).toHaveBeenCalledWith(
       'guest@example.com',
       'Booking Confirmation',
-      '<p>Your booking for 2026-08-01T10:00:00.000Z has been confirmed.</p><p>Booking reference: <strong>booking-id</strong></p>',
+      expect.stringContaining('Booking confirmed'),
+    );
+    expect(resendService.sendEmail).toHaveBeenCalledWith(
+      'guest@example.com',
+      'Booking Confirmation',
+      expect.stringContaining('booking-id'),
     );
     expect(result).toBe(createdBooking);
   });
@@ -244,7 +258,7 @@ describe('BookingService', () => {
       where: { id: 'booking-id' },
       data: {
         status: BookingStatus.CANCELLED,
-        cancelledAt: expect.any(Date),
+        cancelledAt: expect.any(Date) as Date,
         cancelledByUserId: 'customer-id',
       },
       include: {
@@ -353,7 +367,7 @@ describe('BookingService', () => {
       where: { id: 'booking-id' },
       data: {
         status: BookingStatus.CANCELLED,
-        cancelledAt: expect.any(Date),
+        cancelledAt: expect.any(Date) as Date,
         cancelledByUserId: null,
       },
       include: {

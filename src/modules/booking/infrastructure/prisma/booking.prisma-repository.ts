@@ -11,6 +11,10 @@ import { UpdateBookingDto } from '../../presentation/dto/update-booking.dto';
 import { GetBookingsQueryDto } from '../../presentation/dto/get-booking.dto';
 import { AvailabilityService } from 'src/modules/availability/infrastructure/availability.service';
 import { BookingStatus } from 'src/generated/prisma/enums';
+import {
+  renderBookingConfirmationEmail,
+  renderBookingUpdatedEmail,
+} from 'src/infrastructure/mail/templates/booking-email-templates';
 
 const BOOKING_SLOT_MINUTES = 30;
 
@@ -80,7 +84,12 @@ export class BookingService {
     await this.resendService.sendEmail(
       customerEmail,
       'Booking Confirmation',
-      `<p>Your booking for ${dto.appointmentDate.toISOString()} has been confirmed.</p><p>Booking reference: <strong>${booking.id}</strong></p>`,
+      renderBookingConfirmationEmail({
+        appointmentDate: booking.startTime,
+        barberName: booking.barber?.displayName,
+        bookingReference: booking.id,
+        serviceName: booking.service?.name,
+      }),
     );
 
     return booking;
@@ -160,7 +169,12 @@ export class BookingService {
       await this.resendService.sendEmail(
         booking.customerEmail,
         'Booking Updated',
-        `<p>Your booking has been updated.</p>`,
+        renderBookingUpdatedEmail({
+          appointmentDate: updatedBooking.startTime,
+          barberName: updatedBooking.barber?.displayName,
+          bookingReference: updatedBooking.id,
+          serviceName: updatedBooking.service?.name,
+        }),
       );
     }
 
@@ -247,7 +261,12 @@ export class BookingService {
       await this.resendService.sendEmail(
         booking.customerEmail,
         'Booking Updated',
-        `<p>Your booking has been updated.</p>`,
+        renderBookingUpdatedEmail({
+          appointmentDate: updatedBooking.startTime,
+          barberName: updatedBooking.barber?.displayName,
+          bookingReference: updatedBooking.id,
+          serviceName: updatedBooking.service?.name,
+        }),
       );
     }
 

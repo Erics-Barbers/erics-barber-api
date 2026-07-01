@@ -6,6 +6,11 @@ import { Role, SessionRevocationReason } from 'src/generated/prisma/enums';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
 import { UserProfile } from 'src/common/types/profile';
 import { UserUpdateInput } from 'src/generated/prisma/models';
+import {
+  renderMfaCodeEmail,
+  renderPasswordResetEmail,
+  renderVerificationEmail,
+} from 'src/infrastructure/mail/templates/auth-email-templates';
 
 type MfaMethod = 'EMAIL';
 
@@ -395,11 +400,7 @@ export class AuthService {
     const clientBaseUrl = process.env.CLIENT_BASE_URL;
     const verificationLink = `${clientBaseUrl}/email-verify?token=${token}`;
     const subject = 'Verify Your Email';
-    const emailContent = `
-      <h1>Email Verification</h1>
-      <p>Please verify your email by clicking the link below:</p>
-      <a href="${verificationLink}">Verify Email</a>
-    `;
+    const emailContent = renderVerificationEmail(verificationLink);
     await this.resendService.sendEmail(email, subject, emailContent);
   }
 
@@ -421,22 +422,13 @@ export class AuthService {
         : process.env.CLIENT_BASE_URL;
     const resetLink = `${clientBaseUrl}/reset-password?token=${token}`;
     const subject = 'Reset Your Password';
-    const emailContent = `
-      <h1>Password Reset</h1>
-      <p>You can reset your password by clicking the link below:</p>
-      <a href="${resetLink}">Reset Password</a>
-    `;
+    const emailContent = renderPasswordResetEmail(resetLink);
     await this.resendService.sendEmail(email, subject, emailContent);
   }
 
   async sendMfaCodeEmail(email: string, code: string): Promise<void> {
     const subject = "Your Eric's Barbers login code";
-    const emailContent = `
-      <h1>Login Code</h1>
-      <p>Your login code is:</p>
-      <p><strong>${code}</strong></p>
-      <p>This code expires in 10 minutes.</p>
-    `;
+    const emailContent = renderMfaCodeEmail(code);
     await this.resendService.sendEmail(email, subject, emailContent);
   }
 }
