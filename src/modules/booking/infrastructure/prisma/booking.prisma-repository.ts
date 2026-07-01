@@ -1,20 +1,25 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Role } from 'src/common/constants/role.enum';
-import { ResendService } from 'src/infrastructure/mail/resend.service';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
+import { Prisma } from 'src/generated/prisma/client';
 import { CreateBookingDto } from '../../presentation/dto/create-booking.dto';
 import { UpdateBookingDto } from '../../presentation/dto/update-booking.dto';
 import { GetBookingsQueryDto } from '../../presentation/dto/get-booking.dto';
 import { AvailabilityService } from 'src/modules/availability/infrastructure/availability.service';
-import { BookingStatus } from 'src/generated/prisma/enums';
 import {
-  renderBookingConfirmationEmail,
-  renderBookingUpdatedEmail,
-} from 'src/infrastructure/mail/templates/booking-email-templates';
+  BookingStatus,
+  OutboxEventStatus,
+  OutboxEventType,
+} from 'src/generated/prisma/enums';
+import {
+  assertAppointmentDateIsBookable,
+  assertBookingCanBeChangedOnline,
+} from 'src/common/utils/booking-policy';
 
 const BOOKING_SLOT_MINUTES = 30;
 
@@ -22,15 +27,11 @@ const BOOKING_SLOT_MINUTES = 30;
 export class BookingService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly resendService: ResendService,
     private readonly availabilityService: AvailabilityService,
   ) {}
 
   async createBooking(userId: string | undefined, dto: CreateBookingDto) {
-    // Check new booking time is not in the past
-    if (dto.appointmentDate < new Date()) {
-      throw new BadRequestException('Cannot create booking in the past');
-    }
+    assertAppointmentDateIsBookable(dto.appointmentDate);
 
     await this.availabilityService.assertSlotAvailable({
       barberId: dto.barberId,
@@ -63,34 +64,16 @@ export class BookingService {
       );
     }
 
-    const booking = await this.prismaService.booking.create({
-      data: {
-        userId,
-        customerName,
-        customerEmail,
-        customerPhone,
-        serviceId: dto.serviceId,
-        barberId: dto.barberId,
-        status: BookingStatus.CONFIRMED,
-        startTime: dto.appointmentDate,
-        endTime: appointmentEndTime,
-      },
-      include: {
-        service: true,
-        barber: true,
-      },
-    });
-
-    await this.resendService.sendEmail(
+    const booking = await this.createBookingRow({
+      userId,
+      customerName,
       customerEmail,
-      'Booking Confirmation',
-      renderBookingConfirmationEmail({
-        appointmentDate: booking.startTime,
-        barberName: booking.barber?.displayName,
-        bookingReference: booking.id,
-        serviceName: booking.service?.name,
-      }),
-    );
+      customerPhone,
+      serviceId: dto.serviceId,
+      barberId: dto.barberId,
+      appointmentDate: dto.appointmentDate,
+      appointmentEndTime,
+    });
 
     return booking;
   }
@@ -114,9 +97,10 @@ export class BookingService {
       throw new BadRequestException('Cancelled bookings cannot be updated');
     }
 
-    // Check new booking time is not in the past
-    if (dto.appointmentDate && dto.appointmentDate < new Date()) {
-      throw new BadRequestException('Cannot update booking to a past date');
+    assertBookingCanBeChangedOnline(booking.startTime);
+
+    if (dto.appointmentDate) {
+      assertAppointmentDateIsBookable(dto.appointmentDate);
     }
 
     const barberId = dto.barberId ?? booking.barberId;
@@ -149,34 +133,12 @@ export class BookingService {
     }
 
     // Update booking details
-    const updatedBooking = await this.prismaService.booking.update({
-      where: {
-        id: bookingId,
-      },
-      data: {
-        serviceId: dto.serviceId,
-        barberId: dto.barberId,
-        startTime: dto.appointmentDate,
-        endTime: appointmentEndTime,
-      },
-      include: {
-        service: true,
-        barber: true,
-      },
+    const updatedBooking = await this.updateBookingRow(bookingId, {
+      serviceId: dto.serviceId,
+      barberId: dto.barberId,
+      startTime: dto.appointmentDate,
+      endTime: appointmentEndTime,
     });
-
-    if (booking.customerEmail) {
-      await this.resendService.sendEmail(
-        booking.customerEmail,
-        'Booking Updated',
-        renderBookingUpdatedEmail({
-          appointmentDate: updatedBooking.startTime,
-          barberName: updatedBooking.barber?.displayName,
-          bookingReference: updatedBooking.id,
-          serviceName: updatedBooking.service?.name,
-        }),
-      );
-    }
 
     return updatedBooking;
   }
@@ -211,8 +173,10 @@ export class BookingService {
       throw new BadRequestException('Cancelled bookings cannot be updated');
     }
 
-    if (dto.appointmentDate && dto.appointmentDate < new Date()) {
-      throw new BadRequestException('Cannot update booking to a past date');
+    assertBookingCanBeChangedOnline(booking.startTime);
+
+    if (dto.appointmentDate) {
+      assertAppointmentDateIsBookable(dto.appointmentDate);
     }
 
     const barberId = dto.barberId ?? booking.barberId;
@@ -243,32 +207,12 @@ export class BookingService {
       });
     }
 
-    const updatedBooking = await this.prismaService.booking.update({
-      where: { id: booking.id },
-      data: {
-        serviceId: dto.serviceId,
-        barberId: dto.barberId,
-        startTime: dto.appointmentDate,
-        endTime: appointmentEndTime,
-      },
-      include: {
-        service: true,
-        barber: true,
-      },
+    const updatedBooking = await this.updateBookingRow(booking.id, {
+      serviceId: dto.serviceId,
+      barberId: dto.barberId,
+      startTime: dto.appointmentDate,
+      endTime: appointmentEndTime,
     });
-
-    if (booking.customerEmail) {
-      await this.resendService.sendEmail(
-        booking.customerEmail,
-        'Booking Updated',
-        renderBookingUpdatedEmail({
-          appointmentDate: updatedBooking.startTime,
-          barberName: updatedBooking.barber?.displayName,
-          bookingReference: updatedBooking.id,
-          serviceName: updatedBooking.service?.name,
-        }),
-      );
-    }
 
     return updatedBooking;
   }
@@ -286,17 +230,12 @@ export class BookingService {
       throw new BadRequestException('Booking is already cancelled');
     }
 
-    return await this.prismaService.booking.update({
-      where: { id: booking.id },
-      data: {
-        status: BookingStatus.CANCELLED,
-        cancelledAt: new Date(),
-        cancelledByUserId: null,
-      },
-      include: {
-        service: true,
-        barber: true,
-      },
+    assertBookingCanBeChangedOnline(booking.startTime);
+
+    return await this.cancelBookingRow(booking.id, {
+      status: BookingStatus.CANCELLED,
+      cancelledAt: new Date(),
+      cancelledByUserId: null,
     });
   }
 
@@ -313,17 +252,12 @@ export class BookingService {
       throw new BadRequestException('Booking is already cancelled');
     }
 
-    return await this.prismaService.booking.update({
-      where: { id: bookingId },
-      data: {
-        status: BookingStatus.CANCELLED,
-        cancelledAt: new Date(),
-        cancelledByUserId: userId,
-      },
-      include: {
-        service: true,
-        barber: true,
-      },
+    assertBookingCanBeChangedOnline(booking.startTime);
+
+    return await this.cancelBookingRow(bookingId, {
+      status: BookingStatus.CANCELLED,
+      cancelledAt: new Date(),
+      cancelledByUserId: userId,
     });
   }
 
@@ -379,6 +313,157 @@ export class BookingService {
       id: reference.trim(),
       userId: null,
     };
+  }
+
+  private async createBookingRow(options: {
+    userId: string | undefined;
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string | undefined;
+    serviceId: string;
+    barberId: string;
+    appointmentDate: Date;
+    appointmentEndTime: Date;
+  }) {
+    try {
+      return await this.prismaService.$transaction(async (tx) => {
+        const booking = await tx.booking.create({
+          data: {
+            userId: options.userId,
+            customerName: options.customerName,
+            customerEmail: options.customerEmail,
+            customerPhone: options.customerPhone,
+            serviceId: options.serviceId,
+            barberId: options.barberId,
+            status: BookingStatus.CONFIRMED,
+            startTime: options.appointmentDate,
+            endTime: options.appointmentEndTime,
+          },
+          include: {
+            service: true,
+            barber: true,
+          },
+        });
+
+        await this.enqueueBookingEmailEvent(
+          tx,
+          OutboxEventType.BOOKING_CONFIRMATION_EMAIL,
+          options.customerEmail,
+          booking,
+        );
+
+        return booking;
+      });
+    } catch (error) {
+      this.throwSlotConflictIfUniqueConstraint(error);
+      throw error;
+    }
+  }
+
+  private async updateBookingRow(
+    bookingId: string,
+    data: {
+      serviceId?: string;
+      barberId?: string;
+      startTime?: Date;
+      endTime?: Date;
+    },
+  ) {
+    try {
+      return await this.prismaService.$transaction(async (tx) => {
+        const booking = await tx.booking.update({
+          where: { id: bookingId },
+          data,
+          include: {
+            service: true,
+            barber: true,
+          },
+        });
+
+        if (booking.customerEmail) {
+          await this.enqueueBookingEmailEvent(
+            tx,
+            OutboxEventType.BOOKING_UPDATED_EMAIL,
+            booking.customerEmail,
+            booking,
+          );
+        }
+
+        return booking;
+      });
+    } catch (error) {
+      this.throwSlotConflictIfUniqueConstraint(error);
+      throw error;
+    }
+  }
+
+  private async cancelBookingRow(
+    bookingId: string,
+    data: {
+      status: BookingStatus;
+      cancelledAt: Date;
+      cancelledByUserId: string | null;
+    },
+  ) {
+    return await this.prismaService.$transaction(async (tx) => {
+      const booking = await tx.booking.update({
+        where: { id: bookingId },
+        data,
+        include: {
+          service: true,
+          barber: true,
+        },
+      });
+
+      if (booking.customerEmail) {
+        await this.enqueueBookingEmailEvent(
+          tx,
+          OutboxEventType.BOOKING_CANCELLED_EMAIL,
+          booking.customerEmail,
+          booking,
+        );
+      }
+
+      return booking;
+    });
+  }
+
+  private async enqueueBookingEmailEvent(
+    tx: Prisma.TransactionClient,
+    type: OutboxEventType,
+    to: string,
+    booking: {
+      id: string;
+      startTime: Date;
+      status: BookingStatus;
+      barber?: { displayName: string } | null;
+      service?: { name: string; pricePence: number } | null;
+    },
+  ) {
+    await tx.outboxEvent.create({
+      data: {
+        type,
+        status: OutboxEventStatus.PENDING,
+        payload: {
+          appointmentDate: booking.startTime.toISOString(),
+          barberName: booking.barber?.displayName ?? null,
+          bookingReference: booking.id,
+          pricePence: booking.service?.pricePence ?? null,
+          serviceName: booking.service?.name ?? null,
+          status: booking.status,
+          to,
+        },
+      },
+    });
+  }
+
+  private throwSlotConflictIfUniqueConstraint(error: unknown): never | void {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      throw new ConflictException('Booking time is not available');
+    }
   }
 
   private async getBookingAccessWhere(

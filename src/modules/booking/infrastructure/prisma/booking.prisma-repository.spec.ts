@@ -3,7 +3,12 @@ jest.mock('src/infrastructure/mail/resend.service', () => ({
 }));
 
 import { BookingService } from './booking.prisma-repository';
-import { BookingStatus } from 'src/generated/prisma/enums';
+import { Prisma } from 'src/generated/prisma/client';
+import {
+  BookingStatus,
+  OutboxEventStatus,
+  OutboxEventType,
+} from 'src/generated/prisma/enums';
 import { Role } from 'src/common/constants/role.enum';
 
 describe('BookingService', () => {
@@ -14,24 +19,52 @@ describe('BookingService', () => {
     assertSlotAvailable: jest.fn(),
   };
 
-  const createPrismaService = () => ({
-    user: {
-      findUnique: jest.fn(),
-    },
-    barber: {
-      findUnique: jest.fn(),
-    },
-    booking: {
-      create: jest.fn(),
-      findFirst: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-    },
-  });
+  const createPrismaService = () => {
+    const prismaService = {
+      $transaction: jest.fn(),
+      user: {
+        findUnique: jest.fn(),
+      },
+      barber: {
+        findUnique: jest.fn(),
+      },
+      booking: {
+        create: jest.fn(),
+        findFirst: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn(),
+      },
+      outboxEvent: {
+        create: jest.fn(),
+      },
+    };
+
+    prismaService.$transaction.mockImplementation(async (callback) =>
+      callback(prismaService),
+    );
+
+    return prismaService;
+  };
 
   beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-01T09:00:00.000Z'));
     jest.clearAllMocks();
   });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  function createUniqueConstraintError() {
+    return new Prisma.PrismaClientKnownRequestError(
+      'Unique constraint failed on the fields: (`barberId`,`startTime`)',
+      {
+        clientVersion: 'test',
+        code: 'P2002',
+        meta: { target: ['barberId', 'startTime'] },
+      },
+    );
+  }
 
   it('creates 30-minute bookings for the selected barber', async () => {
     const prismaService = createPrismaService();
@@ -41,7 +74,7 @@ describe('BookingService', () => {
       barberId: 'barber-id',
       status: BookingStatus.CONFIRMED,
       startTime: new Date('2026-08-01T10:00:00.000Z'),
-      service: { id: 'service-id', name: 'Haircut' },
+      service: { id: 'service-id', name: 'Haircut', pricePence: 2500 },
       barber: { id: 'barber-id', displayName: 'Eric' },
     };
     prismaService.user.findUnique.mockResolvedValue({
@@ -54,7 +87,6 @@ describe('BookingService', () => {
 
     const bookingService = new BookingService(
       prismaService as never,
-      resendService as never,
       availabilityService as never,
     );
     const appointmentDate = new Date('2026-08-01T10:00:00.000Z');
@@ -87,16 +119,22 @@ describe('BookingService', () => {
         barber: true,
       },
     });
-    expect(resendService.sendEmail).toHaveBeenCalledWith(
-      'customer@example.com',
-      'Booking Confirmation',
-      expect.stringContaining('Booking confirmed'),
-    );
-    expect(resendService.sendEmail).toHaveBeenCalledWith(
-      'customer@example.com',
-      'Booking Confirmation',
-      expect.stringContaining('booking-id'),
-    );
+    expect(prismaService.outboxEvent.create).toHaveBeenCalledWith({
+      data: {
+        type: OutboxEventType.BOOKING_CONFIRMATION_EMAIL,
+        status: OutboxEventStatus.PENDING,
+        payload: {
+          appointmentDate: '2026-08-01T10:00:00.000Z',
+          barberName: 'Eric',
+          bookingReference: 'booking-id',
+          pricePence: 2500,
+          serviceName: 'Haircut',
+          status: BookingStatus.CONFIRMED,
+          to: 'customer@example.com',
+        },
+      },
+    });
+    expect(resendService.sendEmail).not.toHaveBeenCalled();
     expect(result).toBe(createdBooking);
   });
 
@@ -108,7 +146,7 @@ describe('BookingService', () => {
       customerEmail: 'guest@example.com',
       customerName: 'Guest Customer',
       customerPhone: '+447900000000',
-      service: { name: 'Haircut' },
+      service: { name: 'Haircut', pricePence: 2500 },
       status: BookingStatus.CONFIRMED,
       startTime: new Date('2026-08-01T10:00:00.000Z'),
     };
@@ -118,7 +156,6 @@ describe('BookingService', () => {
 
     const bookingService = new BookingService(
       prismaService as never,
-      resendService as never,
       availabilityService as never,
     );
     const appointmentDate = new Date('2026-08-01T10:00:00.000Z');
@@ -150,16 +187,22 @@ describe('BookingService', () => {
         barber: true,
       },
     });
-    expect(resendService.sendEmail).toHaveBeenCalledWith(
-      'guest@example.com',
-      'Booking Confirmation',
-      expect.stringContaining('Booking confirmed'),
-    );
-    expect(resendService.sendEmail).toHaveBeenCalledWith(
-      'guest@example.com',
-      'Booking Confirmation',
-      expect.stringContaining('booking-id'),
-    );
+    expect(prismaService.outboxEvent.create).toHaveBeenCalledWith({
+      data: {
+        type: OutboxEventType.BOOKING_CONFIRMATION_EMAIL,
+        status: OutboxEventStatus.PENDING,
+        payload: {
+          appointmentDate: '2026-08-01T10:00:00.000Z',
+          barberName: 'Eric',
+          bookingReference: 'booking-id',
+          pricePence: 2500,
+          serviceName: 'Haircut',
+          status: BookingStatus.CONFIRMED,
+          to: 'guest@example.com',
+        },
+      },
+    });
+    expect(resendService.sendEmail).not.toHaveBeenCalled();
     expect(result).toBe(createdBooking);
   });
 
@@ -169,7 +212,6 @@ describe('BookingService', () => {
 
     const bookingService = new BookingService(
       prismaService as never,
-      resendService as never,
       availabilityService as never,
     );
 
@@ -184,6 +226,50 @@ describe('BookingService', () => {
     expect(prismaService.booking.create).not.toHaveBeenCalled();
   });
 
+  it('rejects same-day bookings', async () => {
+    const prismaService = createPrismaService();
+    const bookingService = new BookingService(
+      prismaService as never,
+      availabilityService as never,
+    );
+
+    await expect(
+      bookingService.createBooking(undefined, {
+        serviceId: 'service-id',
+        barberId: 'barber-id',
+        appointmentDate: new Date('2026-07-01T10:00:00.000Z'),
+        customerEmail: 'guest@example.com',
+        customerName: 'Guest Customer',
+        customerPhone: '+447900000000',
+      }),
+    ).rejects.toThrow('Bookings cannot be made for today or a past date');
+
+    expect(availabilityService.assertSlotAvailable).not.toHaveBeenCalled();
+    expect(prismaService.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects bookings more than one month in advance', async () => {
+    const prismaService = createPrismaService();
+    const bookingService = new BookingService(
+      prismaService as never,
+      availabilityService as never,
+    );
+
+    await expect(
+      bookingService.createBooking(undefined, {
+        serviceId: 'service-id',
+        barberId: 'barber-id',
+        appointmentDate: new Date('2026-08-02T10:00:00.000Z'),
+        customerEmail: 'guest@example.com',
+        customerName: 'Guest Customer',
+        customerPhone: '+447900000000',
+      }),
+    ).rejects.toThrow('Bookings can only be made up to 1 month in advance');
+
+    expect(availabilityService.assertSlotAvailable).not.toHaveBeenCalled();
+    expect(prismaService.booking.create).not.toHaveBeenCalled();
+  });
+
   it('rejects bookings that do not start on a half-hour boundary', async () => {
     const prismaService = createPrismaService();
     availabilityService.assertSlotAvailable.mockRejectedValue(
@@ -192,7 +278,6 @@ describe('BookingService', () => {
 
     const bookingService = new BookingService(
       prismaService as never,
-      resendService as never,
       availabilityService as never,
     );
 
@@ -205,12 +290,38 @@ describe('BookingService', () => {
     ).rejects.toThrow('Booking start time must be on the hour or half hour');
   });
 
+  it('returns a slot conflict when the database rejects a duplicate active slot', async () => {
+    const prismaService = createPrismaService();
+    prismaService.user.findUnique.mockResolvedValue({
+      email: 'customer@example.com',
+      name: 'Customer Name',
+    });
+    prismaService.booking.create.mockRejectedValue(
+      createUniqueConstraintError(),
+    );
+    availabilityService.assertSlotAvailable.mockResolvedValue(undefined);
+
+    const bookingService = new BookingService(
+      prismaService as never,
+      availabilityService as never,
+    );
+
+    await expect(
+      bookingService.createBooking('customer-id', {
+        serviceId: 'service-id',
+        barberId: 'barber-id',
+        appointmentDate: new Date('2026-08-01T10:00:00.000Z'),
+      }),
+    ).rejects.toThrow('Booking time is not available');
+
+    expect(prismaService.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
   it('scopes customer booking details to the authenticated user', async () => {
     const prismaService = createPrismaService();
     prismaService.booking.findFirst.mockResolvedValue({ id: 'booking-id' });
     const bookingService = new BookingService(
       prismaService as never,
-      resendService as never,
       availabilityService as never,
     );
 
@@ -229,20 +340,86 @@ describe('BookingService', () => {
     });
   });
 
+  it('queues an update email when a customer changes their booking', async () => {
+    const prismaService = createPrismaService();
+    const appointmentDate = new Date('2026-08-01T11:00:00.000Z');
+    const updatedBooking = {
+      id: 'booking-id',
+      barber: { displayName: 'Eric' },
+      customerEmail: 'customer@example.com',
+      service: { name: 'Haircut + Beard', pricePence: 3500 },
+      status: BookingStatus.CONFIRMED,
+      startTime: appointmentDate,
+    };
+    prismaService.booking.findFirst.mockResolvedValue({
+      id: 'booking-id',
+      barberId: 'barber-id',
+      customerEmail: 'customer@example.com',
+      serviceId: 'service-id',
+      startTime: new Date('2026-08-01T10:00:00.000Z'),
+      status: BookingStatus.CONFIRMED,
+    });
+    prismaService.booking.update.mockResolvedValue(updatedBooking);
+    availabilityService.assertSlotAvailable.mockResolvedValue(undefined);
+
+    const bookingService = new BookingService(
+      prismaService as never,
+      availabilityService as never,
+    );
+
+    const result = await bookingService.updateBooking(
+      'booking-id',
+      'customer-id',
+      Role.Customer,
+      { appointmentDate },
+    );
+
+    expect(availabilityService.assertSlotAvailable).toHaveBeenCalledWith({
+      barberId: 'barber-id',
+      serviceId: 'service-id',
+      startTime: appointmentDate,
+      excludeBookingId: 'booking-id',
+    });
+    expect(prismaService.outboxEvent.create).toHaveBeenCalledWith({
+      data: {
+        type: OutboxEventType.BOOKING_UPDATED_EMAIL,
+        status: OutboxEventStatus.PENDING,
+        payload: {
+          appointmentDate: '2026-08-01T11:00:00.000Z',
+          barberName: 'Eric',
+          bookingReference: 'booking-id',
+          pricePence: 3500,
+          serviceName: 'Haircut + Beard',
+          status: BookingStatus.CONFIRMED,
+          to: 'customer@example.com',
+        },
+      },
+    });
+    expect(result).toBe(updatedBooking);
+  });
+
   it('cancels an accessible customer booking through a dedicated status update', async () => {
     const prismaService = createPrismaService();
     prismaService.booking.findFirst.mockResolvedValue({
       id: 'booking-id',
+      startTime: new Date('2026-08-01T10:00:00.000Z'),
       status: BookingStatus.CONFIRMED,
     });
-    prismaService.booking.update.mockResolvedValue({});
+    const cancelledBooking = {
+      id: 'booking-id',
+      barber: { displayName: 'Eric' },
+      customerEmail: 'customer@example.com',
+      service: { name: 'Haircut', pricePence: 2500 },
+      status: BookingStatus.CANCELLED,
+      startTime: new Date('2026-08-01T10:00:00.000Z'),
+    };
+    prismaService.booking.update.mockResolvedValue(cancelledBooking);
     const bookingService = new BookingService(
       prismaService as never,
-      resendService as never,
       availabilityService as never,
     );
 
-    await bookingService.cancelBooking(
+    const result = await bookingService.cancelBooking(
       'booking-id',
       'customer-id',
       Role.Customer,
@@ -266,6 +443,22 @@ describe('BookingService', () => {
         barber: true,
       },
     });
+    expect(prismaService.outboxEvent.create).toHaveBeenCalledWith({
+      data: {
+        type: OutboxEventType.BOOKING_CANCELLED_EMAIL,
+        status: OutboxEventStatus.PENDING,
+        payload: {
+          appointmentDate: '2026-08-01T10:00:00.000Z',
+          barberName: 'Eric',
+          bookingReference: 'booking-id',
+          pricePence: 2500,
+          serviceName: 'Haircut',
+          status: BookingStatus.CANCELLED,
+          to: 'customer@example.com',
+        },
+      },
+    });
+    expect(result).toBe(cancelledBooking);
   });
 
   it('rejects updates to cancelled customer bookings', async () => {
@@ -276,7 +469,6 @@ describe('BookingService', () => {
     });
     const bookingService = new BookingService(
       prismaService as never,
-      resendService as never,
       availabilityService as never,
     );
 
@@ -289,21 +481,121 @@ describe('BookingService', () => {
     expect(prismaService.booking.update).not.toHaveBeenCalled();
   });
 
+  it('rejects rescheduling when the original booking is today', async () => {
+    const prismaService = createPrismaService();
+    prismaService.booking.findFirst.mockResolvedValue({
+      id: 'booking-id',
+      barberId: 'barber-id',
+      serviceId: 'service-id',
+      startTime: new Date('2026-07-01T10:00:00.000Z'),
+      status: BookingStatus.CONFIRMED,
+    });
+    const bookingService = new BookingService(
+      prismaService as never,
+      availabilityService as never,
+    );
+
+    await expect(
+      bookingService.updateBooking('booking-id', 'customer-id', Role.Customer, {
+        appointmentDate: new Date('2026-07-02T10:00:00.000Z'),
+      }),
+    ).rejects.toThrow(
+      'Bookings can only be rescheduled or cancelled online up to the day before',
+    );
+
+    expect(availabilityService.assertSlotAvailable).not.toHaveBeenCalled();
+    expect(prismaService.booking.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects rescheduling to today', async () => {
+    const prismaService = createPrismaService();
+    prismaService.booking.findFirst.mockResolvedValue({
+      id: 'booking-id',
+      barberId: 'barber-id',
+      serviceId: 'service-id',
+      startTime: new Date('2026-08-01T09:00:00.000Z'),
+      status: BookingStatus.CONFIRMED,
+    });
+    const bookingService = new BookingService(
+      prismaService as never,
+      availabilityService as never,
+    );
+
+    await expect(
+      bookingService.updateBooking('booking-id', 'customer-id', Role.Customer, {
+        appointmentDate: new Date('2026-07-01T10:00:00.000Z'),
+      }),
+    ).rejects.toThrow('Bookings cannot be made for today or a past date');
+
+    expect(availabilityService.assertSlotAvailable).not.toHaveBeenCalled();
+    expect(prismaService.booking.update).not.toHaveBeenCalled();
+  });
+
+  it('returns a slot conflict when the database rejects a duplicate reschedule slot', async () => {
+    const prismaService = createPrismaService();
+    const appointmentDate = new Date('2026-08-01T10:00:00.000Z');
+    prismaService.booking.findFirst.mockResolvedValue({
+      id: 'booking-id',
+      barberId: 'barber-id',
+      serviceId: 'service-id',
+      startTime: new Date('2026-08-01T09:00:00.000Z'),
+      status: BookingStatus.CONFIRMED,
+    });
+    prismaService.booking.update.mockRejectedValue(
+      createUniqueConstraintError(),
+    );
+    availabilityService.assertSlotAvailable.mockResolvedValue(undefined);
+
+    const bookingService = new BookingService(
+      prismaService as never,
+      availabilityService as never,
+    );
+
+    await expect(
+      bookingService.updateBooking('booking-id', 'customer-id', Role.Customer, {
+        appointmentDate,
+      }),
+    ).rejects.toThrow('Booking time is not available');
+
+    expect(prismaService.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
   it('rejects cancelling already-cancelled customer bookings', async () => {
     const prismaService = createPrismaService();
     prismaService.booking.findFirst.mockResolvedValue({
       id: 'booking-id',
+      startTime: new Date('2026-07-01T10:00:00.000Z'),
       status: BookingStatus.CANCELLED,
     });
     const bookingService = new BookingService(
       prismaService as never,
-      resendService as never,
       availabilityService as never,
     );
 
     await expect(
       bookingService.cancelBooking('booking-id', 'customer-id', Role.Customer),
     ).rejects.toThrow('Booking is already cancelled');
+
+    expect(prismaService.booking.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects cancelling when the booking is today', async () => {
+    const prismaService = createPrismaService();
+    prismaService.booking.findFirst.mockResolvedValue({
+      id: 'booking-id',
+      startTime: new Date('2026-07-01T10:00:00.000Z'),
+      status: BookingStatus.CONFIRMED,
+    });
+    const bookingService = new BookingService(
+      prismaService as never,
+      availabilityService as never,
+    );
+
+    await expect(
+      bookingService.cancelBooking('booking-id', 'customer-id', Role.Customer),
+    ).rejects.toThrow(
+      'Bookings can only be rescheduled or cancelled online up to the day before',
+    );
 
     expect(prismaService.booking.update).not.toHaveBeenCalled();
   });
@@ -318,7 +610,6 @@ describe('BookingService', () => {
     prismaService.booking.findFirst.mockResolvedValue(booking);
     const bookingService = new BookingService(
       prismaService as never,
-      resendService as never,
       availabilityService as never,
     );
 
@@ -339,18 +630,22 @@ describe('BookingService', () => {
     const prismaService = createPrismaService();
     const booking = {
       id: 'booking-id',
+      customerEmail: 'guest@example.com',
+      startTime: new Date('2026-08-01T10:00:00.000Z'),
       userId: null,
       status: BookingStatus.CONFIRMED,
     };
     const cancelledBooking = {
       ...booking,
+      barber: { displayName: 'Eric' },
+      service: { name: 'Haircut', pricePence: 2500 },
+      startTime: new Date('2026-08-01T10:00:00.000Z'),
       status: BookingStatus.CANCELLED,
     };
     prismaService.booking.findFirst.mockResolvedValue(booking);
     prismaService.booking.update.mockResolvedValue(cancelledBooking);
     const bookingService = new BookingService(
       prismaService as never,
-      resendService as never,
       availabilityService as never,
     );
 
@@ -375,6 +670,21 @@ describe('BookingService', () => {
         barber: true,
       },
     });
+    expect(prismaService.outboxEvent.create).toHaveBeenCalledWith({
+      data: {
+        type: OutboxEventType.BOOKING_CANCELLED_EMAIL,
+        status: OutboxEventStatus.PENDING,
+        payload: {
+          appointmentDate: '2026-08-01T10:00:00.000Z',
+          barberName: 'Eric',
+          bookingReference: 'booking-id',
+          pricePence: 2500,
+          serviceName: 'Haircut',
+          status: BookingStatus.CANCELLED,
+          to: 'guest@example.com',
+        },
+      },
+    });
     expect(result).toBe(cancelledBooking);
   });
 
@@ -383,7 +693,6 @@ describe('BookingService', () => {
     prismaService.booking.updateMany.mockResolvedValue({ count: 2 });
     const bookingService = new BookingService(
       prismaService as never,
-      resendService as never,
       availabilityService as never,
     );
 
