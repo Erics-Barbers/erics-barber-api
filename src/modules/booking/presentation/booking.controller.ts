@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Query,
+  ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
 import { GetBookingsUseCase } from '../application/use-cases/get-bookings.use-case';
@@ -86,7 +87,7 @@ export class BookingController {
   @Patch('reference/:reference')
   @UseGuards(BookingGuard)
   async updateBookingByReference(
-    @Param('reference') reference: string,
+    @Param('reference', new ParseUUIDPipe({ version: '4' })) reference: string,
     @Body() dto: UpdateBookingDto,
   ) {
     const booking = await this.updateBookingUseCase.guestUpdate(reference, dto);
@@ -95,7 +96,9 @@ export class BookingController {
 
   @Patch('reference/:reference/cancel')
   @UseGuards(BookingGuard)
-  async cancelBookingByReference(@Param('reference') reference: string) {
+  async cancelBookingByReference(
+    @Param('reference', new ParseUUIDPipe({ version: '4' })) reference: string,
+  ) {
     const booking = await this.updateBookingUseCase.guestCancel(reference);
     return { message: 'Booking cancelled successfully', booking };
   }

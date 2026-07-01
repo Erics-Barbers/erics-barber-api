@@ -14,6 +14,8 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { BookingGuard } from 'src/common/guards/booking.guard';
 import { Role } from 'src/common/constants/role.enum';
 
+const BOOKING_REFERENCE = '93f86393-7e60-4f2e-bf22-ef9f95d6e071';
+
 describe('BookingController', () => {
   let controller: BookingController;
   let getBookingsUseCase: { execute: jest.Mock };
@@ -161,30 +163,33 @@ describe('BookingController', () => {
   });
 
   it('looks up guest bookings by reference', async () => {
-    const booking = { id: 'booking-id', status: 'CONFIRMED' };
+    const booking = { id: BOOKING_REFERENCE, status: 'CONFIRMED' };
     getBookingDetailsUseCase.byReference.mockResolvedValue(booking);
 
     const result = await controller.getBookingByReference({
-      reference: 'booking-id',
+      reference: BOOKING_REFERENCE,
     });
 
     expect(getBookingDetailsUseCase.byReference).toHaveBeenCalledWith(
-      'booking-id',
+      BOOKING_REFERENCE,
     );
     expect(result).toEqual({ booking });
   });
 
   it('updates guest bookings by reference', async () => {
-    const booking = { id: 'booking-id', status: 'CONFIRMED' };
+    const booking = { id: BOOKING_REFERENCE, status: 'CONFIRMED' };
     const dto = {
       appointmentDate: new Date('2026-07-01T10:30:00.000Z'),
     };
     updateBookingUseCase.guestUpdate.mockResolvedValue(booking);
 
-    const result = await controller.updateBookingByReference('booking-id', dto);
+    const result = await controller.updateBookingByReference(
+      BOOKING_REFERENCE,
+      dto,
+    );
 
     expect(updateBookingUseCase.guestUpdate).toHaveBeenCalledWith(
-      'booking-id',
+      BOOKING_REFERENCE,
       dto,
     );
     expect(result).toEqual({
@@ -194,12 +199,14 @@ describe('BookingController', () => {
   });
 
   it('cancels guest bookings by reference', async () => {
-    const booking = { id: 'booking-id', status: 'CANCELLED' };
+    const booking = { id: BOOKING_REFERENCE, status: 'CANCELLED' };
     updateBookingUseCase.guestCancel.mockResolvedValue(booking);
 
-    const result = await controller.cancelBookingByReference('booking-id');
+    const result = await controller.cancelBookingByReference(BOOKING_REFERENCE);
 
-    expect(updateBookingUseCase.guestCancel).toHaveBeenCalledWith('booking-id');
+    expect(updateBookingUseCase.guestCancel).toHaveBeenCalledWith(
+      BOOKING_REFERENCE,
+    );
     expect(result).toEqual({
       message: 'Booking cancelled successfully',
       booking,

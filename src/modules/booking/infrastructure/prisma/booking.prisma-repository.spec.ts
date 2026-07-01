@@ -600,11 +600,11 @@ describe('BookingService', () => {
     expect(prismaService.booking.update).not.toHaveBeenCalled();
   });
 
-  it('looks up unlinked guest bookings by reference', async () => {
+  it('looks up bookings by high-entropy reference', async () => {
     const prismaService = createPrismaService();
     const booking = {
       id: 'booking-id',
-      userId: null,
+      userId: 'customer-id',
       customerEmail: 'guest@example.com',
     };
     prismaService.booking.findFirst.mockResolvedValue(booking);
@@ -619,7 +619,6 @@ describe('BookingService', () => {
     expect(prismaService.booking.findFirst).toHaveBeenCalledWith({
       where: {
         id: 'booking-id',
-        userId: null,
       },
       include: { service: true, barber: true },
     });
@@ -655,7 +654,6 @@ describe('BookingService', () => {
     expect(prismaService.booking.findFirst).toHaveBeenCalledWith({
       where: {
         id: 'booking-id',
-        userId: null,
       },
     });
     expect(prismaService.booking.update).toHaveBeenCalledWith({

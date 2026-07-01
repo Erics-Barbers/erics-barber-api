@@ -311,7 +311,6 @@ export class BookingService {
   private getGuestBookingReferenceWhere(reference: string) {
     return {
       id: reference.trim(),
-      userId: null,
     };
   }
 
