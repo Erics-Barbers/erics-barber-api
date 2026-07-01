@@ -27,10 +27,20 @@ async function main() {
     select: { id: true },
   });
   const barberIds = barbers.map((barber) => barber.id);
+  const services = await prisma.service.findMany({
+    where: { name: { in: demoServiceNames } },
+    select: { id: true },
+  });
+  const serviceIds = services.map((service) => service.id);
 
   await prisma.booking.deleteMany({
     where: {
-      OR: [{ userId: { in: userIds } }, { barberId: { in: barberIds } }],
+      OR: [
+        { userId: { in: userIds } },
+        { cancelledByUserId: { in: userIds } },
+        { barberId: { in: barberIds } },
+        { serviceId: { in: serviceIds } },
+      ],
     },
   });
   await prisma.barberAvailabilityException.deleteMany({

@@ -89,7 +89,7 @@ describe('BookingService', () => {
     expect(resendService.sendEmail).toHaveBeenCalledWith(
       'customer@example.com',
       'Booking Confirmation',
-      '<p>Your booking for 2026-08-01T10:00:00.000Z has been confirmed.</p>',
+      '<p>Your booking for 2026-08-01T10:00:00.000Z has been confirmed.</p><p>Booking reference: <strong>booking-id</strong></p>',
     );
     expect(result).toBe(createdBooking);
   });
@@ -144,7 +144,7 @@ describe('BookingService', () => {
     expect(resendService.sendEmail).toHaveBeenCalledWith(
       'guest@example.com',
       'Booking Confirmation',
-      '<p>Your booking for 2026-08-01T10:00:00.000Z has been confirmed.</p>',
+      '<p>Your booking for 2026-08-01T10:00:00.000Z has been confirmed.</p><p>Booking reference: <strong>booking-id</strong></p>',
     );
     expect(result).toBe(createdBooking);
   });
@@ -217,7 +217,10 @@ describe('BookingService', () => {
 
   it('cancels an accessible customer booking through a dedicated status update', async () => {
     const prismaService = createPrismaService();
-    prismaService.booking.findFirst.mockResolvedValue({ id: 'booking-id' });
+    prismaService.booking.findFirst.mockResolvedValue({
+      id: 'booking-id',
+      status: BookingStatus.CONFIRMED,
+    });
     prismaService.booking.update.mockResolvedValue({});
     const bookingService = new BookingService(
       prismaService as never,
@@ -239,12 +242,56 @@ describe('BookingService', () => {
     });
     expect(prismaService.booking.update).toHaveBeenCalledWith({
       where: { id: 'booking-id' },
-      data: { status: BookingStatus.CANCELLED },
+      data: {
+        status: BookingStatus.CANCELLED,
+        cancelledAt: expect.any(Date),
+        cancelledByUserId: 'customer-id',
+      },
       include: {
         service: true,
         barber: true,
       },
     });
+  });
+
+  it('rejects updates to cancelled customer bookings', async () => {
+    const prismaService = createPrismaService();
+    prismaService.booking.findFirst.mockResolvedValue({
+      id: 'booking-id',
+      status: BookingStatus.CANCELLED,
+    });
+    const bookingService = new BookingService(
+      prismaService as never,
+      resendService as never,
+      availabilityService as never,
+    );
+
+    await expect(
+      bookingService.updateBooking('booking-id', 'customer-id', Role.Customer, {
+        appointmentDate: new Date('2026-08-01T10:00:00.000Z'),
+      }),
+    ).rejects.toThrow('Cancelled bookings cannot be updated');
+
+    expect(prismaService.booking.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects cancelling already-cancelled customer bookings', async () => {
+    const prismaService = createPrismaService();
+    prismaService.booking.findFirst.mockResolvedValue({
+      id: 'booking-id',
+      status: BookingStatus.CANCELLED,
+    });
+    const bookingService = new BookingService(
+      prismaService as never,
+      resendService as never,
+      availabilityService as never,
+    );
+
+    await expect(
+      bookingService.cancelBooking('booking-id', 'customer-id', Role.Customer),
+    ).rejects.toThrow('Booking is already cancelled');
+
+    expect(prismaService.booking.update).not.toHaveBeenCalled();
   });
 
   it('looks up unlinked guest bookings by reference', async () => {
@@ -304,7 +351,11 @@ describe('BookingService', () => {
     });
     expect(prismaService.booking.update).toHaveBeenCalledWith({
       where: { id: 'booking-id' },
-      data: { status: BookingStatus.CANCELLED },
+      data: {
+        status: BookingStatus.CANCELLED,
+        cancelledAt: expect.any(Date),
+        cancelledByUserId: null,
+      },
       include: {
         service: true,
         barber: true,

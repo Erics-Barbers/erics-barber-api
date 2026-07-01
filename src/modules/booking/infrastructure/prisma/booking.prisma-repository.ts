@@ -80,7 +80,7 @@ export class BookingService {
     await this.resendService.sendEmail(
       customerEmail,
       'Booking Confirmation',
-      `<p>Your booking for ${dto.appointmentDate.toISOString()} has been confirmed.</p>`,
+      `<p>Your booking for ${dto.appointmentDate.toISOString()} has been confirmed.</p><p>Booking reference: <strong>${booking.id}</strong></p>`,
     );
 
     return booking;
@@ -99,6 +99,10 @@ export class BookingService {
 
     if (!booking) {
       throw new NotFoundException('Booking not found');
+    }
+
+    if (booking.status === BookingStatus.CANCELLED) {
+      throw new BadRequestException('Cancelled bookings cannot be updated');
     }
 
     // Check new booking time is not in the past
@@ -265,7 +269,11 @@ export class BookingService {
 
     return await this.prismaService.booking.update({
       where: { id: booking.id },
-      data: { status: BookingStatus.CANCELLED },
+      data: {
+        status: BookingStatus.CANCELLED,
+        cancelledAt: new Date(),
+        cancelledByUserId: null,
+      },
       include: {
         service: true,
         barber: true,
@@ -282,9 +290,17 @@ export class BookingService {
       throw new NotFoundException('Booking not found');
     }
 
+    if (booking.status === BookingStatus.CANCELLED) {
+      throw new BadRequestException('Booking is already cancelled');
+    }
+
     return await this.prismaService.booking.update({
       where: { id: bookingId },
-      data: { status: BookingStatus.CANCELLED },
+      data: {
+        status: BookingStatus.CANCELLED,
+        cancelledAt: new Date(),
+        cancelledByUserId: userId,
+      },
       include: {
         service: true,
         barber: true,
