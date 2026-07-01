@@ -43,9 +43,10 @@ export class BookingController {
   @Roles(Role.Admin, Role.Customer)
   async getBookings(
     @CurrentUser() userId: string,
+    @CurrentUserRole() role: Role,
     @Query() query: GetBookingsQueryDto,
   ) {
-    const bookings = await this.getBookingsUseCase.execute(userId, query);
+    const bookings = await this.getBookingsUseCase.execute(userId, role, query);
     return bookings;
   }
 

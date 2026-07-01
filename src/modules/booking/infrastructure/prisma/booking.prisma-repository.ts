@@ -274,11 +274,9 @@ export class BookingService {
     return booking;
   }
 
-  async getBookings(userId: string, query: GetBookingsQueryDto) {
+  async getBookings(userId: string, role: Role, query: GetBookingsQueryDto) {
     const userBookings = await this.prismaService.booking.findMany({
-      where: {
-        userId,
-      },
+      where: role === Role.Admin ? {} : { userId },
       include: { service: true, barber: true },
       orderBy: { startTime: 'asc' },
     });

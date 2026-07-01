@@ -71,11 +71,29 @@ describe('BookingController', () => {
   it('uses the authenticated user when listing bookings', async () => {
     getBookingsUseCase.execute.mockResolvedValue([]);
 
-    await controller.getBookings('customer-id', { page: 1 });
+    await controller.getBookings('customer-id', Role.Customer, { page: 1 });
 
-    expect(getBookingsUseCase.execute).toHaveBeenCalledWith('customer-id', {
-      page: 1,
-    });
+    expect(getBookingsUseCase.execute).toHaveBeenCalledWith(
+      'customer-id',
+      Role.Customer,
+      {
+        page: 1,
+      },
+    );
+  });
+
+  it('passes the admin role when listing bookings', async () => {
+    getBookingsUseCase.execute.mockResolvedValue([]);
+
+    await controller.getBookings('admin-id', Role.Admin, { limit: 20 });
+
+    expect(getBookingsUseCase.execute).toHaveBeenCalledWith(
+      'admin-id',
+      Role.Admin,
+      {
+        limit: 20,
+      },
+    );
   });
 
   it('uses the authenticated user when creating a booking', async () => {

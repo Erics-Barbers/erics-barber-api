@@ -31,6 +31,7 @@ describe('BookingService', () => {
       booking: {
         create: jest.fn(),
         findFirst: jest.fn(),
+        findMany: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn(),
       },
@@ -338,6 +339,52 @@ describe('BookingService', () => {
       },
       include: { service: true, barber: true },
     });
+  });
+
+  it('scopes customer booking listings to the authenticated user', async () => {
+    const prismaService = createPrismaService();
+    prismaService.booking.findMany.mockResolvedValue([{ id: 'booking-id' }]);
+    const bookingService = new BookingService(
+      prismaService as never,
+      availabilityService as never,
+    );
+
+    const result = await bookingService.getBookings(
+      'customer-id',
+      Role.Customer,
+      {},
+    );
+
+    expect(prismaService.booking.findMany).toHaveBeenCalledWith({
+      where: { userId: 'customer-id' },
+      include: { service: true, barber: true },
+      orderBy: { startTime: 'asc' },
+    });
+    expect(result).toEqual([{ id: 'booking-id' }]);
+  });
+
+  it('allows admin booking listings across all customers', async () => {
+    const prismaService = createPrismaService();
+    prismaService.booking.findMany.mockResolvedValue([
+      { id: 'first-booking' },
+      { id: 'second-booking' },
+    ]);
+    const bookingService = new BookingService(
+      prismaService as never,
+      availabilityService as never,
+    );
+
+    const result = await bookingService.getBookings('admin-id', Role.Admin, {
+      page: 1,
+      limit: 1,
+    });
+
+    expect(prismaService.booking.findMany).toHaveBeenCalledWith({
+      where: {},
+      include: { service: true, barber: true },
+      orderBy: { startTime: 'asc' },
+    });
+    expect(result).toEqual([{ id: 'first-booking' }]);
   });
 
   it('queues an update email when a customer changes their booking', async () => {
