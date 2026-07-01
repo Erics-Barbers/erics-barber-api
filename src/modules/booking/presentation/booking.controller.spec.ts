@@ -17,15 +17,25 @@ import { Role } from 'src/common/constants/role.enum';
 describe('BookingController', () => {
   let controller: BookingController;
   let getBookingsUseCase: { execute: jest.Mock };
-  let getBookingDetailsUseCase: { execute: jest.Mock };
+  let getBookingDetailsUseCase: { execute: jest.Mock; byReference: jest.Mock };
   let createBookingUseCase: { execute: jest.Mock };
-  let updateBookingUseCase: { execute: jest.Mock; cancel: jest.Mock };
+  let updateBookingUseCase: {
+    execute: jest.Mock;
+    cancel: jest.Mock;
+    guestUpdate: jest.Mock;
+    guestCancel: jest.Mock;
+  };
 
   beforeEach(async () => {
     getBookingsUseCase = { execute: jest.fn() };
-    getBookingDetailsUseCase = { execute: jest.fn() };
+    getBookingDetailsUseCase = { execute: jest.fn(), byReference: jest.fn() };
     createBookingUseCase = { execute: jest.fn() };
-    updateBookingUseCase = { execute: jest.fn(), cancel: jest.fn() };
+    updateBookingUseCase = {
+      execute: jest.fn(),
+      cancel: jest.fn(),
+      guestUpdate: jest.fn(),
+      guestCancel: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BookingController],
@@ -104,12 +114,13 @@ describe('BookingController', () => {
   });
 
   it('uses the authenticated user and role when updating a booking', async () => {
-    updateBookingUseCase.execute.mockResolvedValue(undefined);
+    const booking = { id: 'booking-id', status: 'CONFIRMED' };
+    updateBookingUseCase.execute.mockResolvedValue(booking);
     const dto = {
       appointmentDate: new Date('2026-07-01T10:30:00.000Z'),
     };
 
-    await controller.updateBooking(
+    const result = await controller.updateBooking(
       'customer-id',
       Role.Customer,
       'booking-id',
@@ -122,17 +133,76 @@ describe('BookingController', () => {
       Role.Customer,
       dto,
     );
+    expect(result).toEqual({
+      message: 'Booking updated successfully',
+      booking,
+    });
   });
 
   it('cancels bookings through the dedicated cancel use case path', async () => {
-    updateBookingUseCase.cancel.mockResolvedValue(undefined);
+    const booking = { id: 'booking-id', status: 'CANCELLED' };
+    updateBookingUseCase.cancel.mockResolvedValue(booking);
 
-    await controller.cancelBooking('customer-id', Role.Customer, 'booking-id');
+    const result = await controller.cancelBooking(
+      'customer-id',
+      Role.Customer,
+      'booking-id',
+    );
 
     expect(updateBookingUseCase.cancel).toHaveBeenCalledWith(
       'booking-id',
       'customer-id',
       Role.Customer,
     );
+    expect(result).toEqual({
+      message: 'Booking cancelled successfully',
+      booking,
+    });
+  });
+
+  it('looks up guest bookings by reference', async () => {
+    const booking = { id: 'booking-id', status: 'CONFIRMED' };
+    getBookingDetailsUseCase.byReference.mockResolvedValue(booking);
+
+    const result = await controller.getBookingByReference({
+      reference: 'booking-id',
+    });
+
+    expect(getBookingDetailsUseCase.byReference).toHaveBeenCalledWith(
+      'booking-id',
+    );
+    expect(result).toEqual({ booking });
+  });
+
+  it('updates guest bookings by reference', async () => {
+    const booking = { id: 'booking-id', status: 'CONFIRMED' };
+    const dto = {
+      appointmentDate: new Date('2026-07-01T10:30:00.000Z'),
+    };
+    updateBookingUseCase.guestUpdate.mockResolvedValue(booking);
+
+    const result = await controller.updateBookingByReference('booking-id', dto);
+
+    expect(updateBookingUseCase.guestUpdate).toHaveBeenCalledWith(
+      'booking-id',
+      dto,
+    );
+    expect(result).toEqual({
+      message: 'Booking updated successfully',
+      booking,
+    });
+  });
+
+  it('cancels guest bookings by reference', async () => {
+    const booking = { id: 'booking-id', status: 'CANCELLED' };
+    updateBookingUseCase.guestCancel.mockResolvedValue(booking);
+
+    const result = await controller.cancelBookingByReference('booking-id');
+
+    expect(updateBookingUseCase.guestCancel).toHaveBeenCalledWith('booking-id');
+    expect(result).toEqual({
+      message: 'Booking cancelled successfully',
+      booking,
+    });
   });
 });

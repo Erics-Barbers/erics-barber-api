@@ -23,4 +23,15 @@ export class UpdateBookingUseCase {
   async cancel(bookingId: string, userId: string, role: Role) {
     return await this.bookingService.cancelBooking(bookingId, userId, role);
   }
+
+  async guestUpdate(reference: string, dto: UpdateBookingDto) {
+    return await this.bookingService.updateGuestBookingByReference(
+      reference,
+      dto,
+    );
+  }
+
+  async guestCancel(reference: string) {
+    return await this.bookingService.cancelGuestBookingByReference(reference);
+  }
 }

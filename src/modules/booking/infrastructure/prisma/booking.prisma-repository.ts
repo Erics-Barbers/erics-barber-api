@@ -70,7 +70,7 @@ export class BookingService {
         status: BookingStatus.CONFIRMED,
         startTime: dto.appointmentDate,
         endTime: appointmentEndTime,
-      } as never,
+      },
       include: {
         service: true,
         barber: true,
@@ -136,7 +136,7 @@ export class BookingService {
     }
 
     // Update booking details
-    await this.prismaService.booking.update({
+    const updatedBooking = await this.prismaService.booking.update({
       where: {
         id: bookingId,
       },
@@ -146,13 +146,131 @@ export class BookingService {
         startTime: dto.appointmentDate,
         endTime: appointmentEndTime,
       },
+      include: {
+        service: true,
+        barber: true,
+      },
     });
 
-    await this.resendService.sendEmail(
-      '',
-      'Booking Updated',
-      `<p>Your booking has been updated.</p>`,
-    );
+    if (booking.customerEmail) {
+      await this.resendService.sendEmail(
+        booking.customerEmail,
+        'Booking Updated',
+        `<p>Your booking has been updated.</p>`,
+      );
+    }
+
+    return updatedBooking;
+  }
+
+  async getGuestBookingByReference(reference: string) {
+    const booking = await this.prismaService.booking.findFirst({
+      where: this.getGuestBookingReferenceWhere(reference),
+      include: { service: true, barber: true },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    return booking;
+  }
+
+  async updateGuestBookingByReference(
+    reference: string,
+    dto: UpdateBookingDto,
+  ) {
+    const booking = await this.prismaService.booking.findFirst({
+      where: this.getGuestBookingReferenceWhere(reference),
+      include: { service: true },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    if (booking.status === BookingStatus.CANCELLED) {
+      throw new BadRequestException('Cancelled bookings cannot be updated');
+    }
+
+    if (dto.appointmentDate && dto.appointmentDate < new Date()) {
+      throw new BadRequestException('Cannot update booking to a past date');
+    }
+
+    const barberId = dto.barberId ?? booking.barberId;
+    const serviceId = dto.serviceId ?? booking.serviceId;
+
+    if (!barberId) {
+      throw new NotFoundException('Barber not found');
+    }
+
+    if (!serviceId) {
+      throw new NotFoundException('Service not found');
+    }
+
+    const appointmentStartTime = dto.appointmentDate ?? booking.startTime;
+    const appointmentEndTime =
+      dto.appointmentDate || dto.serviceId
+        ? new Date(
+            appointmentStartTime.getTime() + BOOKING_SLOT_MINUTES * 60 * 1000,
+          )
+        : undefined;
+
+    if (dto.appointmentDate || dto.serviceId || dto.barberId) {
+      await this.availabilityService.assertSlotAvailable({
+        barberId,
+        serviceId,
+        startTime: appointmentStartTime,
+        excludeBookingId: booking.id,
+      });
+    }
+
+    const updatedBooking = await this.prismaService.booking.update({
+      where: { id: booking.id },
+      data: {
+        serviceId: dto.serviceId,
+        barberId: dto.barberId,
+        startTime: dto.appointmentDate,
+        endTime: appointmentEndTime,
+      },
+      include: {
+        service: true,
+        barber: true,
+      },
+    });
+
+    if (booking.customerEmail) {
+      await this.resendService.sendEmail(
+        booking.customerEmail,
+        'Booking Updated',
+        `<p>Your booking has been updated.</p>`,
+      );
+    }
+
+    return updatedBooking;
+  }
+
+  async cancelGuestBookingByReference(reference: string) {
+    const booking = await this.prismaService.booking.findFirst({
+      where: this.getGuestBookingReferenceWhere(reference),
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    if (booking.status === BookingStatus.CANCELLED) {
+      throw new BadRequestException('Booking is already cancelled');
+    }
+
+    return await this.prismaService.booking.update({
+      where: { id: booking.id },
+      data: { status: BookingStatus.CANCELLED },
+      include: {
+        service: true,
+        barber: true,
+      },
+    });
   }
 
   async cancelBooking(bookingId: string, userId: string, role: Role) {
@@ -164,16 +282,20 @@ export class BookingService {
       throw new NotFoundException('Booking not found');
     }
 
-    await this.prismaService.booking.update({
+    return await this.prismaService.booking.update({
       where: { id: bookingId },
       data: { status: BookingStatus.CANCELLED },
+      include: {
+        service: true,
+        barber: true,
+      },
     });
   }
 
   async getBookingDetails(bookingId: string, userId: string, role: Role) {
     const booking = await this.prismaService.booking.findFirst({
       where: await this.getBookingAccessWhere(bookingId, userId, role),
-      include: { service: true },
+      include: { service: true, barber: true },
     });
 
     if (!booking) {
@@ -188,7 +310,7 @@ export class BookingService {
       where: {
         userId,
       },
-      include: { service: true },
+      include: { service: true, barber: true },
       orderBy: { startTime: 'asc' },
     });
 
@@ -215,6 +337,13 @@ export class BookingService {
     } as never);
 
     return result.count;
+  }
+
+  private getGuestBookingReferenceWhere(reference: string) {
+    return {
+      id: reference.trim(),
+      userId: null,
+    };
   }
 
   private async getBookingAccessWhere(

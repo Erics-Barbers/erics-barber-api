@@ -56,7 +56,7 @@ describe('BookingService', () => {
       resendService as never,
       availabilityService as never,
     );
-    const appointmentDate = new Date('2026-07-01T10:00:00.000Z');
+    const appointmentDate = new Date('2026-08-01T10:00:00.000Z');
 
     const result = await bookingService.createBooking('customer-id', {
       serviceId: 'service-id',
@@ -79,7 +79,7 @@ describe('BookingService', () => {
         barberId: 'barber-id',
         status: BookingStatus.CONFIRMED,
         startTime: appointmentDate,
-        endTime: new Date('2026-07-01T10:30:00.000Z'),
+        endTime: new Date('2026-08-01T10:30:00.000Z'),
       },
       include: {
         service: true,
@@ -89,7 +89,7 @@ describe('BookingService', () => {
     expect(resendService.sendEmail).toHaveBeenCalledWith(
       'customer@example.com',
       'Booking Confirmation',
-      '<p>Your booking for 2026-07-01T10:00:00.000Z has been confirmed.</p>',
+      '<p>Your booking for 2026-08-01T10:00:00.000Z has been confirmed.</p>',
     );
     expect(result).toBe(createdBooking);
   });
@@ -112,7 +112,7 @@ describe('BookingService', () => {
       resendService as never,
       availabilityService as never,
     );
-    const appointmentDate = new Date('2026-07-01T10:00:00.000Z');
+    const appointmentDate = new Date('2026-08-01T10:00:00.000Z');
 
     const result = await bookingService.createBooking(undefined, {
       appointmentDate,
@@ -134,7 +134,7 @@ describe('BookingService', () => {
         barberId: 'barber-id',
         status: BookingStatus.CONFIRMED,
         startTime: appointmentDate,
-        endTime: new Date('2026-07-01T10:30:00.000Z'),
+        endTime: new Date('2026-08-01T10:30:00.000Z'),
       },
       include: {
         service: true,
@@ -144,7 +144,7 @@ describe('BookingService', () => {
     expect(resendService.sendEmail).toHaveBeenCalledWith(
       'guest@example.com',
       'Booking Confirmation',
-      '<p>Your booking for 2026-07-01T10:00:00.000Z has been confirmed.</p>',
+      '<p>Your booking for 2026-08-01T10:00:00.000Z has been confirmed.</p>',
     );
     expect(result).toBe(createdBooking);
   });
@@ -163,7 +163,7 @@ describe('BookingService', () => {
       bookingService.createBooking(undefined, {
         serviceId: 'service-id',
         barberId: 'barber-id',
-        appointmentDate: new Date('2026-07-01T10:00:00.000Z'),
+        appointmentDate: new Date('2026-08-01T10:00:00.000Z'),
       }),
     ).rejects.toThrow('Customer name, email, and phone are required');
 
@@ -186,7 +186,7 @@ describe('BookingService', () => {
       bookingService.createBooking('customer-id', {
         serviceId: 'service-id',
         barberId: 'barber-id',
-        appointmentDate: new Date('2026-07-01T10:15:00.000Z'),
+        appointmentDate: new Date('2026-08-01T10:15:00.000Z'),
       }),
     ).rejects.toThrow('Booking start time must be on the hour or half hour');
   });
@@ -211,7 +211,7 @@ describe('BookingService', () => {
         id: 'booking-id',
         userId: 'customer-id',
       },
-      include: { service: true },
+      include: { service: true, barber: true },
     });
   });
 
@@ -240,7 +240,77 @@ describe('BookingService', () => {
     expect(prismaService.booking.update).toHaveBeenCalledWith({
       where: { id: 'booking-id' },
       data: { status: BookingStatus.CANCELLED },
+      include: {
+        service: true,
+        barber: true,
+      },
     });
+  });
+
+  it('looks up unlinked guest bookings by reference', async () => {
+    const prismaService = createPrismaService();
+    const booking = {
+      id: 'booking-id',
+      userId: null,
+      customerEmail: 'guest@example.com',
+    };
+    prismaService.booking.findFirst.mockResolvedValue(booking);
+    const bookingService = new BookingService(
+      prismaService as never,
+      resendService as never,
+      availabilityService as never,
+    );
+
+    const result =
+      await bookingService.getGuestBookingByReference(' booking-id ');
+
+    expect(prismaService.booking.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'booking-id',
+        userId: null,
+      },
+      include: { service: true, barber: true },
+    });
+    expect(result).toBe(booking);
+  });
+
+  it('cancels guest bookings by reference', async () => {
+    const prismaService = createPrismaService();
+    const booking = {
+      id: 'booking-id',
+      userId: null,
+      status: BookingStatus.CONFIRMED,
+    };
+    const cancelledBooking = {
+      ...booking,
+      status: BookingStatus.CANCELLED,
+    };
+    prismaService.booking.findFirst.mockResolvedValue(booking);
+    prismaService.booking.update.mockResolvedValue(cancelledBooking);
+    const bookingService = new BookingService(
+      prismaService as never,
+      resendService as never,
+      availabilityService as never,
+    );
+
+    const result =
+      await bookingService.cancelGuestBookingByReference('booking-id');
+
+    expect(prismaService.booking.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'booking-id',
+        userId: null,
+      },
+    });
+    expect(prismaService.booking.update).toHaveBeenCalledWith({
+      where: { id: 'booking-id' },
+      data: { status: BookingStatus.CANCELLED },
+      include: {
+        service: true,
+        barber: true,
+      },
+    });
+    expect(result).toBe(cancelledBooking);
   });
 
   it('links unowned guest bookings by email to a verified user', async () => {

@@ -9,4 +9,8 @@ export class GetBookingDetailsUseCase {
   async execute(bookingId: string, userId: string, role: Role) {
     return await this.bookingService.getBookingDetails(bookingId, userId, role);
   }
+
+  async byReference(reference: string) {
+    return await this.bookingService.getGuestBookingByReference(reference);
+  }
 }

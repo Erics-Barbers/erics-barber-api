@@ -15,6 +15,7 @@ import { UpdateBookingUseCase } from '../application/use-cases/update-booking.us
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { GetBookingsQueryDto } from './dto/get-booking.dto';
+import { BookingReferenceDto } from './dto/booking-reference.dto';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/common/constants/role.enum';
@@ -73,6 +74,32 @@ export class BookingController {
     return { message: 'Booking created successfully', booking };
   }
 
+  @Post('reference/lookup')
+  @UseGuards(BookingGuard)
+  async getBookingByReference(@Body() dto: BookingReferenceDto) {
+    const booking = await this.getBookingDetailsUseCase.byReference(
+      dto.reference,
+    );
+    return { booking };
+  }
+
+  @Patch('reference/:reference')
+  @UseGuards(BookingGuard)
+  async updateBookingByReference(
+    @Param('reference') reference: string,
+    @Body() dto: UpdateBookingDto,
+  ) {
+    const booking = await this.updateBookingUseCase.guestUpdate(reference, dto);
+    return { message: 'Booking updated successfully', booking };
+  }
+
+  @Patch('reference/:reference/cancel')
+  @UseGuards(BookingGuard)
+  async cancelBookingByReference(@Param('reference') reference: string) {
+    const booking = await this.updateBookingUseCase.guestCancel(reference);
+    return { message: 'Booking cancelled successfully', booking };
+  }
+
   @Patch(':id')
   @UseGuards(AuthGuard, RolesGuard, BookingGuard)
   @Roles(Role.Admin, Role.Customer)
@@ -82,8 +109,13 @@ export class BookingController {
     @Param('id') id: string,
     @Body() dto: UpdateBookingDto,
   ) {
-    await this.updateBookingUseCase.execute(id, userId, role, dto);
-    return { message: 'Booking updated successfully' };
+    const booking = await this.updateBookingUseCase.execute(
+      id,
+      userId,
+      role,
+      dto,
+    );
+    return { message: 'Booking updated successfully', booking };
   }
 
   @Patch(':id/cancel')
@@ -94,7 +126,7 @@ export class BookingController {
     @CurrentUserRole() role: Role,
     @Param('id') id: string,
   ) {
-    await this.updateBookingUseCase.cancel(id, userId, role);
-    return { message: 'Booking cancelled successfully' };
+    const booking = await this.updateBookingUseCase.cancel(id, userId, role);
+    return { message: 'Booking cancelled successfully', booking };
   }
 }
