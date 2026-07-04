@@ -14,6 +14,12 @@ CREATE TYPE "AvailabilityExceptionType" AS ENUM ('UNAVAILABLE', 'AVAILABLE');
 CREATE TYPE "BookingStatus" AS ENUM ('PENDING', 'CONFIRMED', 'CANCELLED');
 
 -- CreateEnum
+CREATE TYPE "OutboxEventType" AS ENUM ('AUTH_VERIFICATION_EMAIL', 'AUTH_PASSWORD_RESET_EMAIL', 'AUTH_MFA_CODE_EMAIL', 'BOOKING_CONFIRMATION_EMAIL', 'BOOKING_UPDATED_EMAIL', 'BOOKING_CANCELLED_EMAIL');
+
+-- CreateEnum
+CREATE TYPE "OutboxEventStatus" AS ENUM ('PENDING', 'PROCESSING', 'PROCESSED', 'FAILED');
+
+-- CreateEnum
 CREATE TYPE "SessionRevocationReason" AS ENUM ('ROTATED', 'REPLAY_DETECTED', 'ACCOUNT_DELETED');
 
 -- CreateTable
@@ -163,6 +169,22 @@ CREATE TABLE "Service" (
     CONSTRAINT "Service_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "OutboxEvent" (
+    "id" TEXT NOT NULL,
+    "type" "OutboxEventType" NOT NULL,
+    "status" "OutboxEventStatus" NOT NULL DEFAULT 'PENDING',
+    "payload" JSONB NOT NULL,
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "lastError" TEXT,
+    "availableAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "processedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "OutboxEvent_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -220,6 +242,12 @@ CREATE INDEX "BarberAvailabilityException_barberId_date_idx" ON "BarberAvailabil
 -- CreateIndex
 CREATE UNIQUE INDEX "Service_name_key" ON "Service"("name");
 
+-- CreateIndex
+CREATE INDEX "OutboxEvent_status_availableAt_idx" ON "OutboxEvent"("status", "availableAt");
+
+-- CreateIndex
+CREATE INDEX "OutboxEvent_type_status_idx" ON "OutboxEvent"("type", "status");
+
 -- AddForeignKey
 ALTER TABLE "Barber" ADD CONSTRAINT "Barber_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -255,3 +283,10 @@ ALTER TABLE "BarberAvailabilityRule" ADD CONSTRAINT "BarberAvailabilityRule_barb
 
 -- AddForeignKey
 ALTER TABLE "BarberAvailabilityException" ADD CONSTRAINT "BarberAvailabilityException_barberId_fkey" FOREIGN KEY ("barberId") REFERENCES "Barber"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Prevent two active bookings from occupying the same barber slot.
+-- Cancelled bookings remain historical records and do not block rebooking.
+-- Partial unique index cannot be expressed in schema.prisma, so it is kept as raw SQL.
+CREATE UNIQUE INDEX "Booking_active_barber_startTime_key"
+ON "Booking"("barberId", "startTime")
+WHERE "barberId" IS NOT NULL AND "status" <> 'CANCELLED';
