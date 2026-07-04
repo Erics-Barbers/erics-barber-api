@@ -9,7 +9,9 @@
     "node": "22.21.0"
   },
   "scripts": {
-    "build": "npx prisma migrate dev && npx prisma generate && nest build",
+    "build": "nest build",
+    "build:deploy": "npx prisma generate && nest build",
+    "db:deploy": "npx prisma migrate deploy",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:prisma": "npx prisma format",
     "db:booking:seed": "ts-node -r tsconfig-paths/register scripts/seed-booking-dev.ts",
