@@ -18,7 +18,7 @@
     "db:booking:reset": "ts-node -r tsconfig-paths/register scripts/reset-booking-dev.ts",
     "db:booking:reseed": "npm run db:booking:reset && npm run db:booking:seed",
     "prisma:ui": "npx prisma studio",
-    "start": "nest start",
+    "start": "node dist/main",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",

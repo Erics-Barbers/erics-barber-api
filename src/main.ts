@@ -46,7 +46,8 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // Start the application
-  await app.listen(4000);
+  const port = Number(process.env.PORT ?? 4000);
+  await app.listen(port, '0.0.0.0');
   console.log(`Application is running on: ${await app.getUrl()}`);
 }
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
