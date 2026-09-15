@@ -1,10 +1,8 @@
-FROM debian:bookworm-slim
+FROM postgres:18-bookworm
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-    bash \
     ca-certificates \
-    postgresql-client \
     awscli \
   && rm -rf /var/lib/apt/lists/*
 
