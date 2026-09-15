@@ -18,9 +18,23 @@ export class HealthController {
   @Get()
   @HealthCheck()
   check(): Promise<HealthCheckResult> {
-    return this.health.check([
-      () => this.prisma.isHealthy('database'),
-      () => this.resend.isHealthy('resend'),
-    ]);
+    return this.ready();
+  }
+
+  @Get('live')
+  live(): { status: 'ok' } {
+    return { status: 'ok' };
+  }
+
+  @Get('ready')
+  @HealthCheck()
+  ready(): Promise<HealthCheckResult> {
+    return this.health.check([() => this.prisma.isHealthy('database')]);
+  }
+
+  @Get('email')
+  @HealthCheck()
+  email(): Promise<HealthCheckResult> {
+    return this.health.check([() => this.resend.isHealthy('resend')]);
   }
 }

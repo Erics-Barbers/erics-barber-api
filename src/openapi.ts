@@ -17,7 +17,6 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addBearerAuth()
     .addCookieAuth('refreshToken')
     .addServer('http://localhost:4000', 'Local development')
-    .addServer('https://erics-barber-api.onrender.com', 'Production API')
     .build();
 
   return SwaggerModule.createDocument(app, config, {

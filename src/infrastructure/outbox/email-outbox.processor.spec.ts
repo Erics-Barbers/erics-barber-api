@@ -2,6 +2,8 @@ import { EmailOutboxProcessor } from './email-outbox.processor';
 import { OutboxEventStatus, OutboxEventType } from 'src/generated/prisma/enums';
 
 describe('EmailOutboxProcessor', () => {
+  const originalOutboxEnabled = process.env.EMAIL_OUTBOX_PROCESSOR_ENABLED;
+
   const resendService = {
     sendEmail: jest.fn(),
   };
@@ -16,6 +18,28 @@ describe('EmailOutboxProcessor', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    delete process.env.EMAIL_OUTBOX_PROCESSOR_ENABLED;
+  });
+
+  afterAll(() => {
+    if (originalOutboxEnabled === undefined) {
+      delete process.env.EMAIL_OUTBOX_PROCESSOR_ENABLED;
+    } else {
+      process.env.EMAIL_OUTBOX_PROCESSOR_ENABLED = originalOutboxEnabled;
+    }
+  });
+
+  it('skips scheduled processing when disabled by environment', async () => {
+    process.env.EMAIL_OUTBOX_PROCESSOR_ENABLED = 'false';
+    const processor = new EmailOutboxProcessor(
+      createPrismaService() as never,
+      resendService as never,
+    );
+    const processDueEvents = jest.spyOn(processor, 'processDueEvents');
+
+    await processor.handleOutbox();
+
+    expect(processDueEvents).not.toHaveBeenCalled();
   });
 
   it('sends due booking email events and marks them processed', async () => {

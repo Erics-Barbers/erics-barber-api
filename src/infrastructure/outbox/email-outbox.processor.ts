@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { OutboxEventStatus, OutboxEventType } from 'src/generated/prisma/enums';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
+import { isEnvFlagEnabled } from 'src/common/config/env-flags';
 import {
   renderBookingCancelledEmail,
   renderBookingConfirmationEmail,
@@ -46,6 +47,7 @@ export class EmailOutboxProcessor {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handleOutbox(): Promise<void> {
+    if (!isEnvFlagEnabled('EMAIL_OUTBOX_PROCESSOR_ENABLED')) return;
     if (this.isProcessing) return;
 
     this.isProcessing = true;

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { isEnvFlagEnabled } from 'src/common/config/env-flags';
 import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
 
 const DEFAULT_UNVERIFIED_USER_TTL_DAYS = 7;
@@ -13,6 +14,8 @@ export class UnverifiedUserCleanupService {
 
   @Cron(CronExpression.EVERY_DAY_AT_2AM)
   async handleDailyCleanup(): Promise<void> {
+    if (!isEnvFlagEnabled('AUTH_CLEANUP_JOBS_ENABLED')) return;
+
     const deletedCount = await this.deleteStaleUnverifiedUsers();
 
     if (deletedCount > 0) {

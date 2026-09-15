@@ -1,6 +1,8 @@
 import { ExpiredAuthStateCleanupService } from './expired-auth-state-cleanup.service';
 
 describe('ExpiredAuthStateCleanupService', () => {
+  const originalCleanupEnabled = process.env.AUTH_CLEANUP_JOBS_ENABLED;
+
   let authService: {
     deleteExpiredSessions: jest.Mock;
     deleteExpiredMfaChallenges: jest.Mock;
@@ -13,6 +15,24 @@ describe('ExpiredAuthStateCleanupService', () => {
       deleteExpiredMfaChallenges: jest.fn(),
     };
     service = new ExpiredAuthStateCleanupService(authService as never);
+    delete process.env.AUTH_CLEANUP_JOBS_ENABLED;
+  });
+
+  afterAll(() => {
+    if (originalCleanupEnabled === undefined) {
+      delete process.env.AUTH_CLEANUP_JOBS_ENABLED;
+    } else {
+      process.env.AUTH_CLEANUP_JOBS_ENABLED = originalCleanupEnabled;
+    }
+  });
+
+  it('skips the scheduled cleanup when disabled by environment', async () => {
+    process.env.AUTH_CLEANUP_JOBS_ENABLED = 'false';
+
+    await service.handleDailyCleanup();
+
+    expect(authService.deleteExpiredSessions).not.toHaveBeenCalled();
+    expect(authService.deleteExpiredMfaChallenges).not.toHaveBeenCalled();
   });
 
   it('deletes expired sessions and MFA challenges before the reference date', async () => {

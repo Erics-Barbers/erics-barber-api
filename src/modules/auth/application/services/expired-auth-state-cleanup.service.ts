@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { isEnvFlagEnabled } from 'src/common/config/env-flags';
 import { AuthService } from '../../infrastructure/prisma/auth.prisma-repository';
 
 @Injectable()
@@ -10,6 +11,8 @@ export class ExpiredAuthStateCleanupService {
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async handleDailyCleanup(): Promise<void> {
+    if (!isEnvFlagEnabled('AUTH_CLEANUP_JOBS_ENABLED')) return;
+
     const result = await this.deleteExpiredAuthState();
 
     if (result.sessionsDeleted > 0 || result.mfaChallengesDeleted > 0) {

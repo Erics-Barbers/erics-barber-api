@@ -19,8 +19,12 @@ export class ResendHealthIndicator {
 
   async isHealthy(key = 'resend'): Promise<HealthIndicatorResult> {
     try {
-      const testEmail = 'fahmidulhaque97@pm.me';
-      // Perform a simple operation to check Resend service connectivity
+      const testEmail = process.env.HEALTH_CHECK_EMAIL_TO;
+
+      if (!testEmail) {
+        throw new Error('HEALTH_CHECK_EMAIL_TO is not configured');
+      }
+
       const response: CreateEmailResponse = await this.resendService.sendEmail(
         testEmail,
         'Health Check',

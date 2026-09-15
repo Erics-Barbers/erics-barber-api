@@ -37,9 +37,14 @@ Create a `.env` file in the root directory and configure the following variables
 ```
 DATABASE_URL=postgresql://user:password@localhost:5432/erics_barber
 RESEND_API_KEY=your_resend_api_key
+HEALTH_CHECK_EMAIL_TO=ops@example.com
+EMAIL_OUTBOX_PROCESSOR_ENABLED=true
+AUTH_CLEANUP_JOBS_ENABLED=true
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
+
+`EMAIL_OUTBOX_PROCESSOR_ENABLED` and `AUTH_CLEANUP_JOBS_ENABLED` default to enabled when unset. Set them to `false` only for isolated test or sleeping environments where scheduled background activity must be paused deliberately.
 
 ### Database Migration
 
@@ -59,6 +64,13 @@ npm run start:dev
 npm run test
 npm run test:e2e
 ```
+
+### Deployment Health Checks
+
+- `GET /health/live` is a side-effect-free liveness check.
+- `GET /health/ready` checks required runtime dependencies without sending email.
+- `GET /health` currently aliases readiness for platform compatibility.
+- `GET /health/email` sends a synthetic Resend email to `HEALTH_CHECK_EMAIL_TO` and should only be used for explicit operational verification, not frequent uptime checks.
 
 ## Folder Structure
 
@@ -81,8 +93,7 @@ prisma/
 
 ## API Documentation
 
-- View the API endpoints: [https://erics-barber-api.onrender.com/api](https://erics-barber-api.onrender.com/api)
-- OpenAPI/Swagger documentation is available at `/api` when running locally.
+- OpenAPI/Swagger documentation is available at `/api` when the service is running.
 - `openapi/openapi.json` is the canonical committed client contract.
 - Regenerate it deterministically with `npm run openapi:generate`.
 - Verify that the committed document matches the controllers and DTOs with `npm run openapi:check`.

@@ -4,6 +4,7 @@ describe('UnverifiedUserCleanupService', () => {
   let authService: { deleteUnverifiedCustomersCreatedBefore: jest.Mock };
   let service: UnverifiedUserCleanupService;
   const originalTtl = process.env.UNVERIFIED_USER_TTL_DAYS;
+  const originalCleanupEnabled = process.env.AUTH_CLEANUP_JOBS_ENABLED;
 
   beforeEach(() => {
     authService = {
@@ -11,6 +12,7 @@ describe('UnverifiedUserCleanupService', () => {
     };
     service = new UnverifiedUserCleanupService(authService as never);
     delete process.env.UNVERIFIED_USER_TTL_DAYS;
+    delete process.env.AUTH_CLEANUP_JOBS_ENABLED;
   });
 
   afterAll(() => {
@@ -19,6 +21,22 @@ describe('UnverifiedUserCleanupService', () => {
     } else {
       process.env.UNVERIFIED_USER_TTL_DAYS = originalTtl;
     }
+
+    if (originalCleanupEnabled === undefined) {
+      delete process.env.AUTH_CLEANUP_JOBS_ENABLED;
+    } else {
+      process.env.AUTH_CLEANUP_JOBS_ENABLED = originalCleanupEnabled;
+    }
+  });
+
+  it('skips the scheduled cleanup when disabled by environment', async () => {
+    process.env.AUTH_CLEANUP_JOBS_ENABLED = 'false';
+
+    await service.handleDailyCleanup();
+
+    expect(
+      authService.deleteUnverifiedCustomersCreatedBefore,
+    ).not.toHaveBeenCalled();
   });
 
   it('defaults to a seven day retention window', () => {
