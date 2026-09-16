@@ -9,7 +9,8 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY backup.sh /app/backup.sh
+COPY restore.sh /app/restore.sh
 
-RUN chmod +x /app/backup.sh
+RUN chmod +x /app/backup.sh /app/restore.sh
 
 CMD ["/app/backup.sh"]
