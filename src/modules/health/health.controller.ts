@@ -6,6 +6,7 @@ import {
 } from '@nestjs/terminus';
 import { PrismaHealthIndicator } from './prisma.health';
 import { ResendHealthIndicator } from './resend.health';
+import { SentryHealthIndicator } from './sentry.health';
 
 @Controller('health')
 export class HealthController {
@@ -13,6 +14,7 @@ export class HealthController {
     private health: HealthCheckService,
     private prisma: PrismaHealthIndicator,
     private resend: ResendHealthIndicator,
+    private sentry: SentryHealthIndicator,
   ) {}
 
   @Get()
@@ -29,7 +31,10 @@ export class HealthController {
   @Get('ready')
   @HealthCheck()
   ready(): Promise<HealthCheckResult> {
-    return this.health.check([() => this.prisma.isHealthy('database')]);
+    return this.health.check([
+      () => this.prisma.isHealthy('database'),
+      () => this.sentry.isHealthy('sentry'),
+    ]);
   }
 
   @Get('email')

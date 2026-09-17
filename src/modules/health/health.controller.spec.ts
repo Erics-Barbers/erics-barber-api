@@ -10,6 +10,9 @@ describe('HealthController', () => {
   const resend = {
     isHealthy: jest.fn(),
   };
+  const sentry = {
+    isHealthy: jest.fn(),
+  };
 
   let controller: HealthController;
 
@@ -19,6 +22,7 @@ describe('HealthController', () => {
       health as never,
       prisma as never,
       resend as never,
+      sentry as never,
     );
   });
 
@@ -30,12 +34,15 @@ describe('HealthController', () => {
   it('keeps the default health endpoint side-effect free', async () => {
     health.check.mockResolvedValue({ status: 'ok' });
     prisma.isHealthy.mockResolvedValue({ database: { status: 'up' } });
+    sentry.isHealthy.mockResolvedValue({ sentry: { status: 'up' } });
 
     await controller.check();
     const checks = health.check.mock.calls[0][0] as Array<() => unknown>;
     await checks[0]();
+    await checks[1]();
 
     expect(prisma.isHealthy).toHaveBeenCalledWith('database');
+    expect(sentry.isHealthy).toHaveBeenCalledWith('sentry');
     expect(resend.isHealthy).not.toHaveBeenCalled();
   });
 

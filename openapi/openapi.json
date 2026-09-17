@@ -2044,21 +2044,6 @@
         ]
       }
     },
-    "/debug-sentry": {
-      "get": {
-        "operationId": "AppController_getError",
-        "parameters": [],
-        "responses": {
-          "500": {
-            "description": "Intentional error captured by Sentry."
-          }
-        },
-        "summary": "Trigger a test error for Sentry verification",
-        "tags": [
-          "App"
-        ]
-      }
-    },
     "/health": {
       "get": {
         "operationId": "HealthController_check",

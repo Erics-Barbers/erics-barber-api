@@ -3,12 +3,18 @@ import { TerminusModule } from '@nestjs/terminus';
 import { HealthController } from './health.controller';
 import { PrismaHealthIndicator } from './prisma.health';
 import { ResendHealthIndicator } from './resend.health';
+import { SentryHealthIndicator } from './sentry.health';
 import { PrismaModule } from 'src/infrastructure/prisma/prisma.module';
 import { ResendService } from 'src/infrastructure/mail/resend.service';
 
 @Module({
   imports: [TerminusModule, PrismaModule],
   controllers: [HealthController],
-  providers: [PrismaHealthIndicator, ResendHealthIndicator, ResendService],
+  providers: [
+    PrismaHealthIndicator,
+    ResendHealthIndicator,
+    SentryHealthIndicator,
+    ResendService,
+  ],
 })
 export class HealthModule {}
