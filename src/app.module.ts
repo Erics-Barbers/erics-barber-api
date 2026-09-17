@@ -12,9 +12,11 @@ import { ServicesModule } from './modules/services/services.module';
 import { AvailabilityModule } from './modules/availability/availability.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { RequestLoggingMiddleware } from './common/middleware/request-logging.middleware';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { OutboxModule } from './infrastructure/outbox/outbox.module';
+import { SentryModule } from '@sentry/nestjs/setup';
+import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 
 @Module({
   imports: [
@@ -28,6 +30,7 @@ import { OutboxModule } from './infrastructure/outbox/outbox.module';
     PaymentsModule,
     NotificationsModule,
     OutboxModule,
+    SentryModule.forRoot(),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot({
       throttlers: [
@@ -41,6 +44,10 @@ import { OutboxModule } from './infrastructure/outbox/outbox.module';
   controllers: [AppController],
   providers: [
     AppService,
+    {
+      provide: APP_FILTER,
+      useClass: SentryGlobalFilter,
+    },
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
