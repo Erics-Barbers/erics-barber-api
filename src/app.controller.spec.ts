@@ -19,4 +19,10 @@ describe('AppController', () => {
       expect(appController.getHello()).toBe('Hello World!');
     });
   });
+
+  describe('debug sentry', () => {
+    it('throws an intentional error', () => {
+      expect(() => appController.getError()).toThrow('sentry error!');
+    });
+  });
 });
