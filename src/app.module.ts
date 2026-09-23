@@ -17,6 +17,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { OutboxModule } from './infrastructure/outbox/outbox.module';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
+import { AutomationModule } from './modules/automation/automation.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     PaymentsModule,
     NotificationsModule,
     OutboxModule,
+    AutomationModule,
     SentryModule.forRoot(),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot({

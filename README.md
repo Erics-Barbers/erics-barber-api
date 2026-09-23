@@ -44,6 +44,27 @@ GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
 
+## Browser automation data
+
+The deployed test API can expose `POST /internal/automation/reset` for a
+serialized CI run. The endpoint is excluded from OpenAPI and returns `404`
+unless explicitly enabled.
+
+Required Railway test-environment variables:
+
+```env
+AUTOMATION_RESET_ENABLED=true
+AUTOMATION_RESET_EXPECTED_ENVIRONMENT_ID=<Railway test environment ID>
+AUTOMATION_RESET_TOKEN=<at least 32 random characters>
+```
+
+The running Railway environment ID must match the expected ID and the
+environment name must be `test`. Never configure these variables in
+production. CI calls the endpoint with
+`Authorization: Bearer <AUTOMATION_RESET_TOKEN>` before the full Playwright
+suite. The reset uses a PostgreSQL advisory transaction lock, clears the
+isolated test database, and installs versioned synthetic fixtures.
+
 `EMAIL_OUTBOX_PROCESSOR_ENABLED` and `AUTH_CLEANUP_JOBS_ENABLED` default to enabled when unset. Set them to `false` only for isolated test or sleeping environments where scheduled background activity must be paused deliberately.
 
 ### Database Migration
